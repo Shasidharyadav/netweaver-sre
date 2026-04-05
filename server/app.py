@@ -37,10 +37,10 @@ except Exception as e:  # pragma: no cover
 
 try:
     from ..models import NetweaverSreAction, NetweaverSreObservation
-    from .netweaver_sre_environment import NetweaverSreEnvironment
+    from .netweaver_sre_environment import NetweaverSreEnvironment, set_task_level
 except (ModuleNotFoundError, ImportError):
     from models import NetweaverSreAction, NetweaverSreObservation
-    from server.netweaver_sre_environment import NetweaverSreEnvironment
+    from server.netweaver_sre_environment import NetweaverSreEnvironment, set_task_level
 
 
 # Create the app with web interface and README integration
@@ -51,6 +51,29 @@ app = create_app(
     env_name="netweaver_sre",
     max_concurrent_envs=1,  # increase this number to allow more concurrent WebSocket sessions
 )
+
+# ----- Custom routes -----
+from fastapi import Request
+
+@app.get("/")
+async def root():
+    return {
+        "name": "NetWeaver-SRE",
+        "description": "Autonomous GPU cluster fault triage RL environment",
+        "docs": "/docs",
+        "levels": ["easy", "medium", "hard"],
+        "endpoints": ["/reset", "/step", "/state", "/set_level"]
+    }
+
+@app.post("/set_level")
+async def configure_task_level(request: Request):
+    """Pin the task difficulty for the next /reset call."""
+    body = await request.json()
+    level = body.get("task_level", "").lower()
+    if level not in ("easy", "medium", "hard", ""):
+        return {"error": f"Invalid level '{level}'. Choose: easy, medium, hard"}
+    set_task_level(level)
+    return {"success": True, "task_level": level or "random"}
 
 
 def main(host: str = "0.0.0.0", port: int = 8000):

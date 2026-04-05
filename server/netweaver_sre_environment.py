@@ -10,6 +10,13 @@ import random
 import os
 from uuid import uuid4
 
+# Module-level task level control — set via /set_level HTTP endpoint
+_FORCED_TASK_LEVEL: str = ""
+
+def set_task_level(level: str) -> None:
+    global _FORCED_TASK_LEVEL
+    _FORCED_TASK_LEVEL = level.lower().strip()
+
 from openenv.core.env_server.interfaces import Environment
 from openenv.core.env_server.types import State
 
@@ -34,8 +41,9 @@ class NetweaverSreEnvironment(Environment):
     def reset(self, **kwargs) -> NetweaverSreObservation:
         self._state = State(episode_id=str(uuid4()), step_count=0)
         # Randomly choose task difficulty if not explicitly passed
-        # Allow env var override for automated test runs
-        forced = os.getenv("FORCE_TASK_LEVEL", "")
+        # Priority: HTTP /set_level call > FORCE_TASK_LEVEL env var > random
+        global _FORCED_TASK_LEVEL
+        forced = _FORCED_TASK_LEVEL or os.getenv("FORCE_TASK_LEVEL", "")
         self._active_task = forced if forced else kwargs.get("task_level", random.choice(["easy", "medium", "hard"]))
         self._faulty_node_id = f"node_{random.randint(0, 99)}"
         self._target_pfc = float(random.randint(40, 80))
