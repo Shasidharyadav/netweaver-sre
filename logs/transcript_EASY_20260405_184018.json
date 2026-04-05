@@ -1,0 +1,14 @@
+{
+    "mode": "EASY",
+    "final_reward": 1.0,
+    "chat_history": [
+        {
+            "role": "user",
+            "content": "You are an Autonomous Site Reliability Engineer (SRE).\nSystem Logs: ['CLUSTER INIT: Clos Topology Active. Running mode: EASY', 'ALERT: Node offline. Isolate node_97 using DRAIN_TRAFFIC.']\n\nTask: Identify the exact node name that is offline from the logs (e.g., 'node_54').\nRespond ONLY with a valid JSON object (no markdown) containing precisely:\n{\"command\": \"DRAIN_TRAFFIC\", \"target\": \"the_identified_node_name\"}"
+        },
+        {
+            "role": "assistant",
+            "content": "{\"command\": \"DRAIN_TRAFFIC\", \"target\": \"node_97\"}"
+        }
+    ]
+}

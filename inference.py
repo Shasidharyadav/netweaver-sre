@@ -32,16 +32,14 @@ Respond ONLY with a valid JSON object (no markdown) containing precisely:
 
     "HARD": """You are an Autonomous Site Reliability Engineer (SRE).
 System Logs: {logs}
+Gradient Variances (Indexes 0-9): {variances}
 
-Task: A NaN contagion has infected the network. Use binary search to locate it:
+Task: A NaN contagion has infected the network. Do NOT blindly guess. Use the observations to instantly find it:
 
 STRATEGY:
-1. First, search the entire range: {{"command": "RUN_MINI_ITERATION", "target": "0-9"}}
-2. If "TRIAGE HIT: Fault is inside range X-Y", divide that range in half for the next search.
-   - e.g., if 0-9 hits, try 0-4. If 0-4 CLEAR, then the fault MUST be in 5-9.
-   - Continue dividing until you reach a single index (e.g., 2-2).
-3. NEVER guess a node. NEVER issue DRAIN_TRAFFIC until you see "TRIAGE CONFIRMED: NaN source is node_XX".
-4. When you see "TRIAGE CONFIRMED: NaN source is node_XX" -> immediately issue {{"command": "DRAIN_TRAFFIC", "target": "node_XX"}}.
+1. Look at 'Gradient Variances'. Find the array index (0-9) that has an extremely high variance (e.g., 999.9). This index 'X' is the faulty sub-cluster.
+2. Immediately run a mini iteration exactly on that index to confirm the node: {{"command": "RUN_MINI_ITERATION", "target": "X-X"}}
+3. The system will then log "TRIAGE CONFIRMED: NaN source is node_XX". Only then issue {{"command": "DRAIN_TRAFFIC", "target": "node_XX"}}.
 
 Respond ONLY with a valid JSON object (no markdown)."""
 }
@@ -87,13 +85,18 @@ def run_agent():
                 # Build the system prompt once (first step), then append observations
                 if not chat_history:
                     raw_prompt = PROMPTS.get(current_mode, PROMPTS["EASY"])
-                    system_msg = raw_prompt.format(logs=str(obs.hardware_logs))
+                    system_msg = raw_prompt.format(logs=str(obs.hardware_logs), variances=str(obs.gradient_variances))
                     chat_history.append({"role": "user", "content": system_msg})
                 else:
                     # Append the latest triage result as a new user turn so AI adapts
+                    msg = f"New system logs after your last action: {obs.hardware_logs}."
+                    if current_mode == "HARD":
+                        msg += f" Gradient Variances: {obs.gradient_variances}."
+                    msg += " What is your next action JSON?"
+                    
                     chat_history.append({
                         "role": "user",
-                        "content": f"New system logs after your last action: {obs.hardware_logs}. What is your next action JSON?"
+                        "content": msg
                     })
                 
                 ans = client.chat.completions.create(
@@ -122,6 +125,21 @@ def run_agent():
                 obs = obs_res.observation
 
             print(f"[END] Evaluation Completed. Final Reward: {obs.reward}")
+            
+            # ---- Save Transcript ----
+            os.makedirs("logs", exist_ok=True)
+            import datetime
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            log_filename = f"logs/transcript_{current_mode}_{timestamp}.json"
+            transcript_data = {
+                "mode": current_mode,
+                "final_reward": obs.reward,
+                "chat_history": chat_history
+            }
+            with open(log_filename, "w") as f:
+                json.dump(transcript_data, f, indent=4)
+            print(f"[INFO] Transcript saved to {log_filename}")
+
     except Exception as e:
         print(f"[END] Error: {e}")
 

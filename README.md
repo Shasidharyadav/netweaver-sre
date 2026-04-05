@@ -16,11 +16,11 @@ An OpenEnv-compatible Reinforcement Learning environment for the **Meta PyTorch 
 
 ## Overview
 
-This environment simulates a **100,000 GPU training cluster** where an agent must act as an elite AI Site Reliability Engineer (SRE) to:
+This environment simulates a large-scale AI training cluster dealing with **Network switch failures** and hardware faults. Your AI agent must act as an elite AI Site Reliability Engineer (SRE) to triage three distinct difficulties:
 
-- 🔴 **Easy**: Isolate offline nodes using `DRAIN_TRAFFIC`
-- 🟡 **Medium**: Fix network buffer congestion by tuning PFC thresholds via `TUNE_PFC_THRESHOLD`
-- 🔴 **Hard**: Track Silent Data Corruptions (NaN contagion) using binary search `RUN_MINI_ITERATION`, then isolate
+- 🟢 **Easy (Log Parsing & Action Execution)**: A node goes offline. The agent must parse the system hardware logs to identify the correct node ID and isolate it using `DRAIN_TRAFFIC`.
+- 🟡 **Medium (Threshold Tuning & Variable Extraction)**: A spine switch incurs a buffer congestion overshoot. The agent must successfully parse and extract the target integer threshold from the logs and apply it via `TUNE_PFC_THRESHOLD`.
+- 🔴 **Hard (Multi-step Deductive Reasoning & Binary Search)**: A Silent Data Corruption (NaN contagion) has infected the network with no specific log identifying the faulty node. The agent must use multi-step deductive reasoning by splitting the cluster into ranges and calling `RUN_MINI_ITERATION` to recursively binary-search the anomaly down to a single switch, and *then* isolate it.
 
 ## Action Space
 
