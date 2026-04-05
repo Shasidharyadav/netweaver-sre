@@ -33,18 +33,31 @@ Respond ONLY with a valid JSON object (no markdown) containing precisely:
     "HARD": """You are an Autonomous Site Reliability Engineer (SRE).
 System Logs: {logs}
 
-Task: A NaN contagion has infected the network. You must narrow down the sub-cluster indices.
-1. To search a sub-chunk, output JSON: {{"command": "RUN_MINI_ITERATION", "target": "start-end"}} (e.g. '0-5' or '4-4').
-2. Once you have isolated the specific node causing it from the triage, output JSON: {{"command": "DRAIN_TRAFFIC", "target": "exact_node_name"}}.
+Task: A NaN contagion has infected the network. Use binary search to locate it:
+
+RULES (follow strictly):
+1. Use RUN_MINI_ITERATION to narrow the sub-cluster range: {{"command": "RUN_MINI_ITERATION", "target": "start-end"}}
+   - Start broad: "0-9", then split the HIT range in half each time
+   - e.g. if 0-9 hits → try "0-4" and "5-9" next
+2. NEVER issue DRAIN_TRAFFIC until you see a log that starts with "TRIAGE CONFIRMED"
+3. Only when you see "TRIAGE CONFIRMED: NaN source is node_XX" → issue: {{"command": "DRAIN_TRAFFIC", "target": "node_XX"}}
+   - Copy the EXACT node name from the TRIAGE CONFIRMED message (e.g., node_54)
+   - Never guess a node name
 
 Respond ONLY with a valid JSON object (no markdown)."""
 }
 
+ENV_URL = os.getenv("ENV_URL", "https://Shasidharyadavr-netweaver-sre.hf.space")
+
 def run_agent():
     print("[START] Initializing NetWeaver-SRE Evaluation")
+    print(f"[INFO]  Environment: {ENV_URL}")
+    print(f"[INFO]  Model: {MODEL_NAME}")
+    print(f"[INFO]  API Base: {API_BASE_URL}")
+    print("-" * 50)
     
     try:
-        with NetweaverSreEnv(base_url="http://127.0.0.1:8000").sync() as env:
+        with NetweaverSreEnv(base_url=ENV_URL).sync() as env:
             obs_res = env.reset()
             obs = obs_res.observation
             
