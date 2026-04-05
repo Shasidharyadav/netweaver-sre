@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Environment secrets — never commit these
+.env
+*.env
+
+# Test and scratch files
+test_hf.py
+test_all_levels.py
+
+# uv
+.venv/
+uv.lock
