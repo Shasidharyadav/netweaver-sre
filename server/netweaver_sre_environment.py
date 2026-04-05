@@ -76,7 +76,8 @@ class NetweaverSreEnvironment(Environment):
         if cmd == "DRAIN_TRAFFIC":
             if tgt == self._faulty_node_id:
                 self._logs.append(f"SUCCESS: Faulty node {tgt} isolated.")
-                reward = max(0.0, 1.0 - ((self._state.step_count - 1) * 0.1))
+                step_penalty = 0.05 if self._active_task == "hard" else 0.1
+                reward = max(0.0, 1.0 - ((self._state.step_count - 1) * step_penalty))
                 done = True
             else:
                 self._logs.append(f"ERROR: Drained healthy node {tgt}.")

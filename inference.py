@@ -35,27 +35,37 @@ System Logs: {logs}
 
 Task: A NaN contagion has infected the network. Use binary search to locate it:
 
-RULES (follow strictly):
-1. Use RUN_MINI_ITERATION to narrow the sub-cluster range: {{"command": "RUN_MINI_ITERATION", "target": "start-end"}}
-   - Start broad: "0-9", then split the HIT range in half each time
-   - e.g. if 0-9 hits → try "0-4" and "5-9" next
-2. NEVER issue DRAIN_TRAFFIC until you see a log that starts with "TRIAGE CONFIRMED"
-3. Only when you see "TRIAGE CONFIRMED: NaN source is node_XX" → issue: {{"command": "DRAIN_TRAFFIC", "target": "node_XX"}}
-   - Copy the EXACT node name from the TRIAGE CONFIRMED message (e.g., node_54)
-   - Never guess a node name
+STRATEGY:
+1. First, search the entire range: {{"command": "RUN_MINI_ITERATION", "target": "0-9"}}
+2. If "TRIAGE HIT: Fault is inside range X-Y", divide that range in half for the next search.
+   - e.g., if 0-9 hits, try 0-4. If 0-4 CLEAR, then the fault MUST be in 5-9.
+   - Continue dividing until you reach a single index (e.g., 2-2).
+3. NEVER guess a node. NEVER issue DRAIN_TRAFFIC until you see "TRIAGE CONFIRMED: NaN source is node_XX".
+4. When you see "TRIAGE CONFIRMED: NaN source is node_XX" -> immediately issue {{"command": "DRAIN_TRAFFIC", "target": "node_XX"}}.
 
 Respond ONLY with a valid JSON object (no markdown)."""
 }
 
 ENV_URL = os.getenv("ENV_URL", "https://Shasidharyadavr-netweaver-sre.hf.space")
+FORCE_LEVEL = os.getenv("FORCE_TASK_LEVEL", "")  # e.g. "hard", "medium", "easy"
 
 def run_agent():
     print("[START] Initializing NetWeaver-SRE Evaluation")
     print(f"[INFO]  Environment: {ENV_URL}")
     print(f"[INFO]  Model: {MODEL_NAME}")
     print(f"[INFO]  API Base: {API_BASE_URL}")
+    if FORCE_LEVEL:
+        print(f"[INFO]  Forcing level: {FORCE_LEVEL.upper()}")
     print("-" * 50)
-    
+
+    # Pin task level via HTTP before opening WebSocket session
+    if FORCE_LEVEL:
+        try:
+            import requests
+            requests.post(f"{ENV_URL}/set_level", json={"task_level": FORCE_LEVEL}, timeout=5)
+        except Exception:
+            pass  # non-fatal, server will pick randomly
+
     try:
         with NetweaverSreEnv(base_url=ENV_URL).sync() as env:
             obs_res = env.reset()
