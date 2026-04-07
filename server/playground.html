@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netweaver SRE - Interactive Ops Center</title>
+    <style>
+        :root[data-theme="dark"] {
+            --bg-color: #050510;
+            --gradient-stop: #110e20;
+            --glass-bg: rgba(20, 16, 38, 0.6);
+            --glass-border: rgba(192, 132, 252, 0.3);
+            --glass-highlight: rgba(255, 255, 255, 0.05);
+            --theme-primary: #c084fc;
+            --theme-secondary: #2dd4bf;
+            --theme-accent: #fbbf24;
+            --theme-danger: #f43f5e;
+            --text-main: #f8fafc;
+            --text-secondary: #94a3b8;
+            --log-bg: rgba(0, 0, 0, 0.7);
+            --glow-primary: 0 0 25px rgba(192, 132, 252, 0.4);
+            --glow-secondary: 0 0 25px rgba(45, 212, 191, 0.4);
+        }
+
+        :root[data-theme="light"] {
+            --bg-color: #f1f5f9;
+            --gradient-stop: #e2e8f0;
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(148, 163, 184, 0.4);
+            --glass-highlight: rgba(255, 255, 255, 0.8);
+            --theme-primary: #7e22ce;
+            --theme-secondary: #0d9488;
+            --theme-accent: #d97706;
+            --theme-danger: #e11d48;
+            --text-main: #0f172a;
+            --text-secondary: #475569;
+            --log-bg: rgba(255, 255, 255, 0.9);
+            --glow-primary: 0 5px 15px rgba(126, 34, 206, 0.2);
+            --glow-secondary: 0 5px 15px rgba(13, 148, 136, 0.2);
+        }
+
+        * { transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease; box-sizing: border-box; }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at top right, var(--gradient-stop) 0%, var(--bg-color) 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Animated Particles Background */
+        .particles {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: -1;
+            background-image: 
+                radial-gradient(var(--theme-primary) 1px, transparent 1px),
+                radial-gradient(var(--theme-secondary) 1px, transparent 1px);
+            background-size: 60px 60px, 80px 80px;
+            background-position: 0 0, 30px 30px;
+            opacity: 0.05;
+            animation: drift 30s linear infinite;
+        }
+
+        @keyframes drift {
+            0% { transform: translateY(0) translateX(0); }
+            100% { transform: translateY(-80px) translateX(-60px); }
+        }
+
+        header {
+            padding: 1rem 3rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            z-index: 10;
+        }
+
+        h1 {
+            margin: 0; font-size: 1.8rem; font-weight: 900;
+            background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase; letter-spacing: 2px;
+            display: flex; align-items: center; gap: 15px;
+        }
+
+        .pulse {
+            display: inline-block; width: 12px; height: 12px; border-radius: 50%;
+            background: var(--theme-secondary); box-shadow: var(--glow-secondary);
+            animation: pulse-animation 2s infinite;
+        }
+
+        @keyframes pulse-animation {
+            0% { transform: scale(0.9); opacity: 1; }
+            70% { transform: scale(1.5); opacity: 0; }
+            100% { transform: scale(0.9); opacity: 0; }
+        }
+
+        .btn {
+            background: rgba(128, 128, 128, 0.1);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(5px);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .btn.primary {
+            background: linear-gradient(45deg, var(--theme-primary), rgba(192, 132, 252, 0.5));
+            border-color: var(--theme-primary);
+            color: #fff;
+            box-shadow: var(--glow-primary);
+        }
+
+        .btn.primary:hover {
+            opacity: 0.9;
+            box-shadow: 0 0 30px var(--theme-primary);
+        }
+
+        /* Toggle Icon */
+        .theme-toggle {
+            background: transparent; border: 1px solid var(--glass-border);
+            color: var(--text-main); border-radius: 50%; width: 45px; height: 45px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 1.2rem;
+        }
+        .theme-toggle:hover { background: var(--glass-highlight); }
+
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1.2fr 2fr;
+            padding: 3rem;
+            gap: 2.5rem;
+            max-width: 1800px;
+            margin: 0 auto;
+            width: 100%;
+            z-index: 1;
+        }
+
+        /* Glass Panels */
+        .panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border: 1px solid var(--glass-border);
+            border-top: 1px solid var(--glass-highlight);
+            border-radius: 20px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .panel:nth-child(2) { animation-delay: 0.1s; }
+
+        @keyframes slideUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            margin-top: 0; font-size: 1.2rem; color: var(--theme-secondary);
+            padding-bottom: 1rem; border-bottom: 2px solid var(--glass-border);
+            text-transform: uppercase; letter-spacing: 2px;
+        }
+
+        /* Log Box */
+        .log-box {
+            background: var(--log-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 1rem;
+            flex: 1; overflow-y: auto;
+            max-height: 600px;
+            box-shadow: inset 0 5px 20px rgba(0,0,0,0.2);
+            color: var(--text-main);
+        }
+
+        .log-box::-webkit-scrollbar { width: 8px; }
+        .log-box::-webkit-scrollbar-track { background: transparent; }
+        .log-box::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
+
+        .log-row { margin-bottom: 10px; line-height: 1.5; padding-left: 15px; text-indent: -15px; }
+        .system-log { color: var(--text-secondary); }
+        .error-log { color: var(--theme-danger); font-weight: bold; }
+        .action-log { color: var(--theme-primary); }
+        .highlight { color: var(--theme-accent); font-weight: bold; }
+
+        /* Metric Cards */
+        .metrics-grid {
+            display: grid; grid-template-columns: 1fr; gap: 1.2rem; margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: rgba(128, 128, 128, 0.05);
+            border: 1px solid var(--glass-border);
+            padding: 1.2rem; border-radius: 12px;
+            display: flex; flex-direction: column; gap: 0.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .metric-card:hover {
+            transform: scale(1.01);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .metric-title { font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; font-weight: bold; }
+
+        /* Arrays & Dicts */
+        .array-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; }
+        .array-badge {
+            background: var(--bg-color); border: 1px solid var(--glass-border);
+            padding: 5px 10px; border-radius: 8px; font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem; font-weight: 600;
+        }
+        .array-badge.danger {
+            background: rgba(244, 63, 94, 0.2); color: var(--theme-danger);
+            border-color: var(--theme-danger); box-shadow: 0 0 15px rgba(244, 63, 94, 0.4);
+            animation: flash 1s alternate infinite;
+        }
+
+        @keyframes flash { from { opacity: 0.8;} to {opacity: 1; transform: scale(1.05);}}
+
+        .dict-row { display: flex; justify-content: space-between; font-family: monospace; font-size: 1rem; padding: 6px 0; border-bottom: 1px dashed var(--glass-border); }
+        .dict-row:last-child { border-bottom: none; }
+        .dict-key { color: var(--theme-primary); font-weight: bold;}
+        .dict-val { color: var(--text-main); }
+        .dict-val.warn { color: var(--theme-accent); font-weight: bold; }
+
+        .reward-value { font-family: monospace; font-size: 2.5rem; font-weight: 900; color: var(--theme-secondary); }
+
+        /* Inputs */
+        input, select {
+            background: var(--bg-color); border: 1px solid var(--glass-border);
+            color: var(--text-main); padding: 1rem; border-radius: 10px;
+            font-family: 'Inter', sans-serif; font-size: 1rem;font-weight:600;
+            width: 100%; transition: all 0.3s;
+        }
+        input:focus, select:focus { outline: none; border-color: var(--theme-primary); box-shadow: var(--glow-primary); }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(15px);
+            z-index: 100; display: none; justify-content: center; align-items: flex-start;
+            padding-top: 8vh; opacity: 0; transition: opacity 0.3s; overflow-y: auto;
+        }
+        .modal-overlay.active { display: flex; opacity: 1; }
+
+        .modal-content {
+            background: var(--glass-bg); border: 1px solid var(--theme-primary);
+            box-shadow: var(--glow-primary); border-radius: 20px;
+            padding: 3rem; max-width: 800px; width: 90%; margin-bottom: 5vh;
+            color: var(--text-main);
+        }
+
+        .close-btn { position: absolute; top: 20px; right: 30px; font-size: 2rem; cursor: pointer; color: var(--text-secondary); }
+        .close-btn:hover { color: var(--theme-danger); }
+        code { background: var(--bg-color); padding: 4px 8px; border-radius: 6px; color: var(--theme-secondary); font-family: monospace; font-weight: bold;}
+        
+        @media (max-width: 1200px) { main { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="particles"></div>
+    <header>
+        <h1><div class="pulse"></div>NetWeaver SRE</h1>
+        <div style="display:flex; align-items:center; gap: 1.5rem;">
+            <button class="btn" style="border-color: var(--theme-primary); color: var(--theme-primary);" onclick="toggleHelp()">How To Play</button>
+            <select id="levelSelect" style="width: auto; padding: 0.6rem;">
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard" selected>Hard</option>
+            </select>
+            <button class="btn primary" onclick="resetEnv()">System Reset</button>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark Mode">🌓</button>
+        </div>
+    </header>
+
+    <main>
+        <section class="panel">
+            <h2>Live Telemetry</h2>
+            <div class="metrics-grid">
+                <div class="metric-card" style="border-left: 4px solid var(--theme-primary);">
+                    <span class="metric-title">Queue Depths</span>
+                    <div id="qDepthBox" style="margin-top: 10px;"><i>Initializing Telemetry...</i></div>
+                </div>
+
+                <div class="metric-card" style="border-left: 4px solid var(--theme-secondary);">
+                    <span class="metric-title">Gradient Variances Array</span>
+                    <div id="gVarBox" class="array-container"><i>Initializing Array...</i></div>
+                </div>
+
+                <div class="metric-card" style="border-left: 4px solid var(--theme-accent); flex-direction: row; align-items: center; justify-content: space-between;">
+                    <span class="metric-title" style="font-size: 1.1rem;">Evaluation Score</span>
+                    <span class="reward-value" id="rewardSpan">0.00</span>
+                </div>
+            </div>
+            
+            <div style="margin-top: auto;">
+                <h2>Action Override</h2>
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <select id="actionCmd">
+                        <option value="DRAIN_TRAFFIC">DRAIN_TRAFFIC</option>
+                        <option value="TUNE_PFC_THRESHOLD">TUNE_PFC_THRESHOLD</option>
+                        <option value="RUN_MINI_ITERATION">RUN_MINI_ITERATION</option>
+                    </select>
+                    <div style="display: flex; gap: 1rem;">
+                        <input type="text" id="actionTarget" placeholder="Target Node (e.g. node_97)">
+                        <input type="number" id="actionValue" placeholder="Value (Opt)" style="max-width: 150px;">
+                    </div>
+                    <button class="btn primary" onclick="sendAction()" style="padding: 1.2rem; font-size: 1rem; width: 100%;">EXECUTE INSTRUCTION</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>System Logs Stream</h2>
+            <div class="log-box" id="logsBox">
+                <div class="log-row system-log">> System Boot Sequence Initiated...</div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Help Modal -->
+    <div class="modal-overlay" id="helpModal" onclick="closeHelp(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <span class="close-btn" onclick="toggleHelp()">&times;</span>
+            <h2 style="color: var(--theme-primary); border:none; padding:0; font-size: 1.8rem;">How To Play - SRE Triage</h2>
+            <div style="line-height: 1.8; margin-top: 1rem;">
+                <p><strong>Goal:</strong> Maintain the server cluster by triaging specific faults. Read the System Logs and Telemetry to pinpoint the issue and send exact Action Commands to resolve it efficiently for maximum reward.</p>
+                
+                <h3 style="color: var(--theme-secondary);">Easy Mode</h3>
+                <p>The log tells you which node crashed.<br><b>Solution:</b> Select <code>DRAIN_TRAFFIC</code>, input the exact node (e.g., <code>node_45</code>) into Target, and Execute.</p>
+
+                <h3 style="color: var(--theme-secondary);">Medium Mode</h3>
+                <p>A buffer overshoot happens! The logs give a Target integer.<br><b>Solution:</b> Select <code>TUNE_PFC_THRESHOLD</code>, enter the integer into <b>Value</b>. Execute.</p>
+
+                <h3 style="color: var(--theme-accent);">Hard Mode</h3>
+                <p>A NaN gradient breaks loose! The Telemetry Array will show a spike (e.g., <code>999.9</code>).<br>
+                <b>Step 1:</b> Count the index of the spike (0-15). Launch <code>RUN_MINI_ITERATION</code> with Target <code>"X-X"</code> (e.g., <code>"7-7"</code>).<br>
+                <b>Step 2:</b> The log confirms <code>node_XX</code>. Run <code>DRAIN_TRAFFIC</code> on that node!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const logsBox = document.getElementById('logsBox');
+        let currentTheme = 'dark';
+        
+        function toggleTheme() {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+        }
+
+        function toggleHelp() { document.getElementById('helpModal').classList.toggle('active'); }
+        function closeHelp() { document.getElementById('helpModal').classList.remove('active'); }
+
+        function appendLog(text, type='system-log') {
+            const el = document.createElement('div');
+            el.className = `log-row ${type}`;
+            let formatted = text.replace(/(node_\d+|[A-Z_]{5,}|NaN|\d+\.\d+)/g, '<span class="highlight">$1</span>');
+            el.innerHTML = `> ${formatted}`;
+            logsBox.appendChild(el);
+            logsBox.scrollTop = logsBox.scrollHeight;
+        }
+
+        async function resetEnv() {
+            const level = document.getElementById('levelSelect').value;
+            logsBox.innerHTML = '';
+            appendLog(`[SYSTEM] INITIATING CLUSTER RESET (${level.toUpperCase()})`, 'action-log');
+            
+            try {
+                await fetch('/set_level', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({task_level: level}) });
+                const res = await fetch('/reset', { method: 'POST' });
+                const data = await res.json();
+                updateUI(data);
+            } catch (e) {
+                appendLog(`CRITICAL ERROR during reset: ${e.message}`, 'error-log');
+            }
+        }
+
+        async function sendAction() {
+            const action = {
+                command: document.getElementById('actionCmd').value,
+                target: document.getElementById('actionTarget').value
+            };
+            const val = document.getElementById('actionValue').value;
+            if (val) action.value = parseInt(val);
+
+            appendLog(`[TX] Instruction Transmitted: ${JSON.stringify(action)}`, 'action-log');
+            
+            try {
+                const res = await fetch('/step', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action: action}) });
+                const data = await res.json();
+                updateUI(data);
+            } catch (e) { appendLog(`ERROR on execution: ${e.message}`, 'error-log'); }
+        }
+
+        function updateUI(resData) {
+            const obs = resData.observation || {};
+            
+            if (obs.hardware_logs) { obs.hardware_logs.forEach(msg => appendLog(`[RX] ${msg}`)); }
+
+            const qBox = document.getElementById('qDepthBox');
+            qBox.innerHTML = '';
+            if (obs.queue_depths && Object.keys(obs.queue_depths).length) {
+                for (const [key, value] of Object.entries(obs.queue_depths)) {
+                    qBox.innerHTML += `<div class="dict-row"><span class="dict-key">${key}</span><span class="dict-val ${value > 50 ? 'warn' : ''}">${value.toFixed(1)}</span></div>`;
+                }
+            }
+
+            const gBox = document.getElementById('gVarBox');
+            gBox.innerHTML = '';
+            if (obs.gradient_variances && obs.gradient_variances.length) {
+                obs.gradient_variances.forEach(val => {
+                    gBox.innerHTML += `<span class="array-badge ${val > 500 ? 'danger' : ''}">${val.toFixed(2)}</span>`;
+                });
+            }
+
+            document.getElementById('rewardSpan').innerText = (resData.reward || 0.0).toFixed(2);
+            
+            if (resData.done) {
+                appendLog(`[SYSTEM] EPISODE TERMINATED | FINAL REWARD: ${resData.reward}`, 'action-log');
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', resetEnv);
+    </script>
+</body>
+</html>
