@@ -1,3 +1,12 @@
+---
+title: Netweaver SRE
+emoji: 🛡️
+colorFrom: purple
+colorTo: blue
+sdk: docker
+pinned: false
+---
+
 # NetWeaver SRE - Autonomous Incident Triage 🛡️
 
 NetWeaver SRE is a robust Reinforcement Learning mini-game designed to evaluate an AI agent's ability to act as a Site Reliability Engineer managing a massive GPU cluster. 
