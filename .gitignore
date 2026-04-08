@@ -16,4 +16,3 @@ test_all_levels.py
 
 # uv
 .venv/
-uv.lock
