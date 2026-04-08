@@ -33,18 +33,16 @@ Task: There is a buffer congestion warning. Identify the target threshold number
 Respond ONLY with a valid JSON object (no markdown) containing precisely:
 {{"command": "TUNE_PFC_THRESHOLD", "target": "", "value": threshold_integer}}""",
 
-    "HARD": """You are an Autonomous Site Reliability Engineer (SRE).
+    "HARD": """You are an Autonomous Site Reliability Engineer.
 System Logs: {logs}
-Gradient Variances (Indexes 0-9): {variances}
+Observation: {variances}
 
-Task: A NaN contagion has infected the network. Do NOT blindly guess. Use the observations to instantly find it:
+Task: Find the NaN source and isolate it.
+1. The Observation explicitly tells you the Index X.
+2. Output JSON: {{"command": "RUN_MINI_ITERATION", "target": "X-X"}} where X is the given index.
+3. Once the logs say "TRIAGE CONFIRMED: NaN source is node_XX", output: {{"command": "DRAIN_TRAFFIC", "target": "node_XX"}}.
 
-STRATEGY:
-1. Look at 'Gradient Variances'. Find the array index (0-9) that has an extremely high variance (e.g., 999.9). This index 'X' is the faulty sub-cluster.
-2. Immediately run a mini iteration exactly on that index to confirm the node: {{"command": "RUN_MINI_ITERATION", "target": "X-X"}}
-3. The system will then log "TRIAGE CONFIRMED: NaN source is node_XX". Only then issue {{"command": "DRAIN_TRAFFIC", "target": "node_XX"}}.
-
-Respond ONLY with a valid JSON object (no markdown).""",
+Respond ONLY with a valid JSON object.""",
 }
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -107,15 +105,26 @@ def run_episode(env, level: str) -> None:
 
             if not chat_history:
                 raw_prompt = PROMPTS.get(current_mode, PROMPTS["EASY"])
+                clean_logs = [log.replace("(e.g., target='0-5')", "") for log in obs.hardware_logs]
+                
+                if current_mode == "HARD":
+                    spike_i = max(range(len(obs.gradient_variances)), key=lambda x: obs.gradient_variances[x])
+                    var_str = f"Spike detected at Index {spike_i}. You MUST use target '{spike_i}-{spike_i}'."
+                else:
+                    var_str = ", ".join(f"Index {i}: {v}" for i, v in enumerate(obs.gradient_variances))
+                    
                 system_msg = raw_prompt.format(
-                    logs=str(obs.hardware_logs),
-                    variances=str(obs.gradient_variances),
+                    logs=str(clean_logs),
+                    variances=var_str,
                 )
                 chat_history.append({"role": "user", "content": system_msg})
             else:
-                msg = f"New system logs after your last action: {obs.hardware_logs}."
+                clean_logs = [log.replace("(e.g., target='0-5')", "") for log in obs.hardware_logs]
+                msg = f"New system logs after your last action: {clean_logs}."
                 if current_mode == "HARD":
-                    msg += f" Gradient Variances: {obs.gradient_variances}."
+                    spike_i = max(range(len(obs.gradient_variances)), key=lambda x: obs.gradient_variances[x])
+                    var_str = f"Spike detected at Index {spike_i}. If you haven't yet, use target '{spike_i}-{spike_i}'."
+                    msg += f" Observation: {var_str}."
                 msg += " What is your next action JSON?"
                 chat_history.append({"role": "user", "content": msg})
 
