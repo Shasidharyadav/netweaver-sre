@@ -157,11 +157,11 @@ def run_episode(env, level: str) -> None:
             obs_res = env.step(action)
             obs     = obs_res.observation
 
-            reward = getattr(obs, "reward", None) or getattr(obs_res, "reward", 0.0) or 0.0
+            reward = getattr(obs, "reward", None) or getattr(obs_res, "reward", 0.01) or 0.01
             rewards_list.append(reward)
             log_step(step=steps_taken, action=json.dumps(payload), reward=reward, done=obs.done, error=error_msg)
 
-        final_reward = rewards_list[-1] if rewards_list else 0.0
+        final_reward = rewards_list[-1] if rewards_list else 0.01
         success      = final_reward > 0.1
         log_end(success=success, steps=steps_taken, rewards=rewards_list)
 

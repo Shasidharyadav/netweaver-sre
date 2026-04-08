@@ -73,7 +73,7 @@ class NetweaverSreEnvironment(Environment):
             _GLOBAL_CACHE["gradient_vars"][fault_idx] = 999.9  # Massive NaN contagion variance
             _GLOBAL_CACHE["logs"].append("CRITICAL: Loss diverging rapidly. Perform binary search triage using RUN_MINI_ITERATION (e.g., target='0-5') to locate NaN source then DRAIN_TRAFFIC the node.")
         
-        return self._get_obs(done=False, reward=0.0)
+        return self._get_obs(done=False, reward=0.01)
 
     def step(self, action: NetweaverSreAction) -> NetweaverSreObservation:  # type: ignore[override]
         global _GLOBAL_CACHE
@@ -84,7 +84,7 @@ class NetweaverSreEnvironment(Environment):
         val = action.value
         
         done = False
-        reward = 0.0
+        reward = 0.01
         
         task = _GLOBAL_CACHE["active_task"]
         fnode = _GLOBAL_CACHE["faulty_node_id"]
