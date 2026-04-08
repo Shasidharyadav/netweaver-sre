@@ -55,15 +55,13 @@ app = create_app(
 # ----- Custom routes -----
 from fastapi import Request
 
+from fastapi.responses import FileResponse
+import os
+
 @app.get("/")
 async def root():
-    return {
-        "name": "NetWeaver-SRE",
-        "description": "Autonomous GPU cluster fault triage RL environment",
-        "docs": "/docs",
-        "levels": ["easy", "medium", "hard"],
-        "endpoints": ["/reset", "/step", "/state", "/set_level"]
-    }
+    html_path = os.path.join(os.path.dirname(__file__), "playground.html")
+    return FileResponse(html_path)
 
 @app.post("/set_level")
 async def configure_task_level(request: Request):

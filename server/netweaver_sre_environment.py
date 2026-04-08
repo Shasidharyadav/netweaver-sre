@@ -26,106 +26,126 @@ except ImportError:
     from models import NetweaverSreAction, NetweaverSreObservation
 
 class NetweaverSreEnvironment(Environment):
-    SUPPORTS_CONCURRENT_SESSIONS: bool = True
+    SUPPORTS_CONCURRENT_SESSIONS: bool = False
+    MAX_ATTEMPTS: int = 15
+
+_GLOBAL_CACHE = {
+    "state": State(episode_id=str(uuid4()), step_count=0),
+    "queue_depths": {"spine_1": 10.0, "spine_2": 10.0},
+    "gradient_vars": [0.01] * 16,
+    "logs": [],
+    "faulty_node_id": "",
+    "active_task": "easy",
+    "target_pfc": 0.0
+}
+
+class NetweaverSreEnvironment(Environment):
+    SUPPORTS_CONCURRENT_SESSIONS: bool = False
     MAX_ATTEMPTS: int = 15
 
     def __init__(self):
-        self._state = State(episode_id=str(uuid4()), step_count=0)
-        self._queue_depths = {"spine_1": 10.0, "spine_2": 10.0}
-        self._gradient_vars = [0.01] * 16
-        self._logs = []
-        self._faulty_node_id = ""
-        self._active_task = "easy"
-        self._target_pfc = 0.0
+        pass # state is managed globally
 
     def reset(self, **kwargs) -> NetweaverSreObservation:
-        self._state = State(episode_id=str(uuid4()), step_count=0)
-        # Randomly choose task difficulty if not explicitly passed
-        # Priority: HTTP /set_level call > FORCE_TASK_LEVEL env var > random
-        global _FORCED_TASK_LEVEL
+        global _FORCED_TASK_LEVEL, _GLOBAL_CACHE
+        
+        _GLOBAL_CACHE["state"] = State(episode_id=str(uuid4()), step_count=0)
+        
         forced = _FORCED_TASK_LEVEL or os.getenv("FORCE_TASK_LEVEL", "")
-        self._active_task = forced if forced else kwargs.get("task_level", random.choice(["easy", "medium", "hard"]))
-        self._faulty_node_id = f"node_{random.randint(0, 99)}"
-        self._target_pfc = float(random.randint(40, 80))
+        _GLOBAL_CACHE["active_task"] = forced if forced else kwargs.get("task_level", random.choice(["easy", "medium", "hard"]))
+        _GLOBAL_CACHE["faulty_node_id"] = f"node_{random.randint(0, 99)}"
+        _GLOBAL_CACHE["target_pfc"] = float(random.randint(40, 80))
         
-        self._queue_depths = {"spine_1": 10.0, "spine_2": 10.0}
-        self._gradient_vars = [0.01] * 16
-        self._logs = [f"CLUSTER INIT: Clos Topology Active. Running mode: {self._active_task.upper()}"]
+        _GLOBAL_CACHE["queue_depths"] = {"spine_1": 10.0, "spine_2": 10.0}
+        _GLOBAL_CACHE["gradient_vars"] = [0.01] * 16
+        _GLOBAL_CACHE["logs"] = [f"CLUSTER INIT: Clos Topology Active. Running mode: {_GLOBAL_CACHE['active_task'].upper()}"]
         
-        if self._active_task == "easy":
-            self._logs.append(f"ALERT: Node offline. Isolate {self._faulty_node_id} using DRAIN_TRAFFIC.")
-        elif self._active_task == "medium":
-            self._queue_depths["spine_1"] = 99.9  # Buffer Congestion
-            self._logs.append(f"WARN: Buffer overshoot on spine_1. Identify target threshold (Target: {self._target_pfc}) and adjust via TUNE_PFC_THRESHOLD.")
-        elif self._active_task == "hard":
-            fault_idx = int(self._faulty_node_id.split("_")[1]) // 10  # Map node number 0-99 to 10 sub-clusters
-            self._gradient_vars[fault_idx] = 999.9  # Massive NaN contagion variance in specific index
-            self._logs.append("CRITICAL: Loss diverging rapidly. Perform binary search triage using RUN_MINI_ITERATION (e.g., target='0-5') to locate NaN source then DRAIN_TRAFFIC the node.")
+        task = _GLOBAL_CACHE["active_task"]
+        fnode = _GLOBAL_CACHE["faulty_node_id"]
+        
+        if task == "easy":
+            _GLOBAL_CACHE["logs"].append(f"ALERT: Node offline. Isolate {fnode} using DRAIN_TRAFFIC.")
+        elif task == "medium":
+            _GLOBAL_CACHE["queue_depths"]["spine_1"] = 99.9  # Buffer Congestion
+            _GLOBAL_CACHE["logs"].append(f"WARN: Buffer overshoot on spine_1. Identify target threshold (Target: {_GLOBAL_CACHE['target_pfc']}) and adjust via TUNE_PFC_THRESHOLD.")
+        elif task == "hard":
+            fault_idx = int(fnode.split("_")[1]) // 10  # Map node number 0-99 to 10 sub-clusters
+            _GLOBAL_CACHE["gradient_vars"][fault_idx] = 999.9  # Massive NaN contagion variance
+            _GLOBAL_CACHE["logs"].append("CRITICAL: Loss diverging rapidly. Perform binary search triage using RUN_MINI_ITERATION (e.g., target='0-5') to locate NaN source then DRAIN_TRAFFIC the node.")
         
         return self._get_obs(done=False, reward=0.0)
 
     def step(self, action: NetweaverSreAction) -> NetweaverSreObservation:  # type: ignore[override]
-        self._state.step_count += 1
+        global _GLOBAL_CACHE
+        _GLOBAL_CACHE["state"].step_count += 1
+        
         cmd = action.command.upper()
         tgt = action.target
         val = action.value
         
         done = False
         reward = 0.0
+        
+        task = _GLOBAL_CACHE["active_task"]
+        fnode = _GLOBAL_CACHE["faulty_node_id"]
+        logs = _GLOBAL_CACHE["logs"]
+        qdepths = _GLOBAL_CACHE["queue_depths"]
 
         if cmd == "DRAIN_TRAFFIC":
-            if tgt == self._faulty_node_id:
-                self._logs.append(f"SUCCESS: Faulty node {tgt} isolated.")
-                step_penalty = 0.05 if self._active_task == "hard" else 0.1
-                reward = max(0.0, 1.0 - ((self._state.step_count - 1) * step_penalty))
+            if tgt == fnode:
+                logs.append(f"SUCCESS: Faulty node {tgt} isolated.")
+                step_penalty = 0.05 if task == "hard" else 0.1
+                raw_score = 1.0 - ((_GLOBAL_CACHE["state"].step_count - 1) * step_penalty)
+                reward = max(0.0, round(raw_score, 2))
                 done = True
             else:
-                self._logs.append(f"ERROR: Drained healthy node {tgt}.")
+                logs.append(f"ERROR: Drained healthy node {tgt}.")
                 reward = -0.2
 
         elif cmd == "TUNE_PFC_THRESHOLD":
-            if self._active_task == "medium":
+            if task == "medium":
                 if val is not None:
-                    self._logs.append(f"EXEC: Tuned PFC Threshold to {val}.")
-                    distance = abs(self._target_pfc - float(val))
+                    logs.append(f"EXEC: Tuned PFC Threshold to {val}.")
+                    distance = abs(_GLOBAL_CACHE["target_pfc"] - float(val))
                     rel_improvement = max(0.0, 1.0 - (distance / 40.0))
-                    self._queue_depths["spine_1"] = max(10.0, 99.9 - (rel_improvement * 89.9))
+                    qdepths["spine_1"] = max(10.0, 99.9 - (rel_improvement * 89.9))
                     
                     if distance <= 5.0: # Agent tuned it close enough
-                        self._logs.append("SUCCESS: Congestion fully mitigated.")
-                        reward = max(0.0, 1.0 - ((self._state.step_count - 1) * 0.1))
+                        logs.append("SUCCESS: Congestion fully mitigated.")
+                        raw_score = 1.0 - ((_GLOBAL_CACHE["state"].step_count - 1) * 0.1)
+                        reward = max(0.0, round(raw_score, 2))
                         done = True
                     else:
-                        self._logs.append(f"INFO: Network partially relieved. Still experiencing collision.")
+                        logs.append(f"INFO: Network partially relieved. Still experiencing collision.")
                 else:
-                    self._logs.append("ERROR: TUNE_PFC_THRESHOLD requires a value parameter.")
+                    logs.append("ERROR: TUNE_PFC_THRESHOLD requires a value parameter.")
             else:
-                self._logs.append("ERROR: Tuning PFC is irrelevant to the current fault.")
+                logs.append("ERROR: Tuning PFC is irrelevant to the current fault.")
 
         elif cmd == "RUN_MINI_ITERATION":
-            if self._active_task == "hard":
+            if task == "hard":
                 try:
                     start, end = map(int, tgt.split("-"))
-                    fault_idx = int(self._faulty_node_id.split("_")[1]) // 10
+                    fault_idx = int(fnode.split("_")[1]) // 10
                     span = end - start
                     if start <= fault_idx <= end:
                         if span == 0:
-                            self._logs.append(f"TRIAGE CONFIRMED: NaN source is {self._faulty_node_id} (sub-cluster {start}). Issue DRAIN_TRAFFIC with target='{self._faulty_node_id}'.")
+                            logs.append(f"TRIAGE CONFIRMED: NaN source is {fnode} (sub-cluster {start}). Issue DRAIN_TRAFFIC with target='{fnode}'.")
                         else:
                             mid = (start + end) // 2
-                            self._logs.append(f"TRIAGE HIT: Fault is inside range {start}-{end}. Narrow it — try {start}-{mid} or {mid+1}-{end} next.")
+                            logs.append(f"TRIAGE HIT: Fault is inside range {start}-{end}. Narrow it — try {start}-{mid} or {mid+1}-{end} next.")
                     else:
-                        self._logs.append(f"TRIAGE CLEAR: Range {start}-{end} is healthy. Search the complementary range (0-9 excluding this one).")
+                        logs.append(f"TRIAGE CLEAR: Range {start}-{end} is healthy. Search the complementary range (0-9 excluding this one).")
                 except Exception:
-                    self._logs.append("ERROR: RUN_MINI_ITERATION target must be format 'start-end' (e.g. '0-5').")
+                    logs.append("ERROR: RUN_MINI_ITERATION target must be format 'start-end' (e.g. '0-5').")
             else:
-                self._logs.append("ERROR: Reductive triage only effective for tracking SDC faults.")
+                logs.append("ERROR: Reductive triage only effective for tracking SDC faults.")
                 
         else:
-            self._logs.append(f"UNKNOWN/INVALID ACTION: {cmd}")
+            logs.append(f"UNKNOWN/INVALID ACTION: {cmd}")
             
-        if self._state.step_count >= self.MAX_ATTEMPTS and not done:
-            self._logs.append("SLA BREACH: Timeout limit reached.")
+        if _GLOBAL_CACHE["state"].step_count >= self.MAX_ATTEMPTS and not done:
+            logs.append("SLA BREACH: Timeout limit reached.")
             done = True
             reward = 0.0
 
@@ -133,14 +153,15 @@ class NetweaverSreEnvironment(Environment):
 
     @property
     def state(self) -> State:
-        return self._state
+        return _GLOBAL_CACHE["state"]
 
     def _get_obs(self, done, reward) -> NetweaverSreObservation:
+        global _GLOBAL_CACHE
         return NetweaverSreObservation(
             done=done,
             reward=reward,
-            queue_depths=self._queue_depths.copy(),
-            gradient_variances=self._gradient_vars.copy(),
-            hardware_logs=self._logs[-5:],
+            queue_depths=_GLOBAL_CACHE["queue_depths"].copy(),
+            gradient_variances=_GLOBAL_CACHE["gradient_vars"].copy(),
+            hardware_logs=_GLOBAL_CACHE["logs"][-5:],
             system_health=1.0
         )
