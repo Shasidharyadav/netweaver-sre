@@ -1,454 +1,868 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Netweaver SRE - Interactive Ops Center</title>
-    <style>
-        :root[data-theme="dark"] {
-            --bg-color: #050510;
-            --gradient-stop: #110e20;
-            --glass-bg: rgba(20, 16, 38, 0.6);
-            --glass-border: rgba(192, 132, 252, 0.3);
-            --glass-highlight: rgba(255, 255, 255, 0.05);
-            --theme-primary: #c084fc;
-            --theme-secondary: #2dd4bf;
-            --theme-accent: #fbbf24;
-            --theme-danger: #f43f5e;
-            --text-main: #f8fafc;
-            --text-secondary: #94a3b8;
-            --log-bg: rgba(0, 0, 0, 0.7);
-            --glow-primary: 0 0 25px rgba(192, 132, 252, 0.4);
-            --glow-secondary: 0 0 25px rgba(45, 212, 191, 0.4);
-        }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NetWeaver SRE — Autonomous Incident Triage</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #020810;
+    --bg2:       #040d1a;
+    --panel:     #060f1e;
+    --border:    #0d2440;
+    --border2:   #1a3a5c;
+    --cyan:      #00d4ff;
+    --cyan2:     #00ffcc;
+    --green:     #00ff88;
+    --red:       #ff3366;
+    --amber:     #ffaa00;
+    --purple:    #8844ff;
+    --text:      #b0cce8;
+    --text-dim:  #4a6a8a;
+    --glow-c:    rgba(0,212,255,0.15);
+    --glow-g:    rgba(0,255,136,0.12);
+    --glow-r:    rgba(255,51,102,0.15);
+  }
 
-        :root[data-theme="light"] {
-            --bg-color: #f1f5f9;
-            --gradient-stop: #e2e8f0;
-            --glass-bg: rgba(255, 255, 255, 0.8);
-            --glass-border: rgba(148, 163, 184, 0.4);
-            --glass-highlight: rgba(255, 255, 255, 0.8);
-            --theme-primary: #7e22ce;
-            --theme-secondary: #0d9488;
-            --theme-accent: #d97706;
-            --theme-danger: #e11d48;
-            --text-main: #0f172a;
-            --text-secondary: #475569;
-            --log-bg: rgba(255, 255, 255, 0.9);
-            --glow-primary: 0 5px 15px rgba(126, 34, 206, 0.2);
-            --glow-secondary: 0 5px 15px rgba(13, 148, 136, 0.2);
-        }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        * { transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease; box-sizing: border-box; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-        body {
-            margin: 0; padding: 0;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: radial-gradient(circle at top right, var(--gradient-stop) 0%, var(--bg-color) 100%);
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
-        }
+  /* ── Scanline overlay ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.07) 2px,
+      rgba(0,0,0,0.07) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
 
-        /* Animated Particles Background */
-        .particles {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: -1;
-            background-image: 
-                radial-gradient(var(--theme-primary) 1px, transparent 1px),
-                radial-gradient(var(--theme-secondary) 1px, transparent 1px);
-            background-size: 60px 60px, 80px 80px;
-            background-position: 0 0, 30px 30px;
-            opacity: 0.05;
-            animation: drift 30s linear infinite;
-        }
+  /* ── Noise texture ── */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9998;
+    opacity: 0.4;
+  }
 
-        @keyframes drift {
-            0% { transform: translateY(0) translateX(0); }
-            100% { transform: translateY(-80px) translateX(-60px); }
-        }
+  /* ── Top header bar ── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 28px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border2);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .topbar-logo {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.15rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    color: var(--cyan);
+    text-shadow: 0 0 16px var(--cyan);
+  }
+  .topbar-logo span { color: var(--green); text-shadow: 0 0 12px var(--green); }
+  .topbar-status {
+    display: flex; gap: 20px; align-items: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+  }
+  .status-pill {
+    padding: 3px 10px;
+    border-radius: 2px;
+    border: 1px solid;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .status-pill.ok   { color: var(--green);  border-color: var(--green);  background: rgba(0,255,136,0.08); }
+  .status-pill.warn { color: var(--amber);  border-color: var(--amber);  background: rgba(255,170,0,0.08); }
+  .status-pill.crit { color: var(--red);    border-color: var(--red);    background: rgba(255,51,102,0.08);
+                      animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
 
-        header {
-            padding: 1rem 3rem;
-            background: var(--glass-bg);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border-bottom: 1px solid var(--glass-border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-            z-index: 10;
-        }
+  .topbar-clock {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
 
-        h1 {
-            margin: 0; font-size: 1.8rem; font-weight: 900;
-            background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-transform: uppercase; letter-spacing: 2px;
-            display: flex; align-items: center; gap: 15px;
-        }
+  /* ── Main layout ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 280px 1fr 320px;
+    grid-template-rows: auto 1fr auto;
+    gap: 1px;
+    background: var(--border);
+    min-height: calc(100vh - 52px);
+  }
 
-        .pulse {
-            display: inline-block; width: 12px; height: 12px; border-radius: 50%;
-            background: var(--theme-secondary); box-shadow: var(--glow-secondary);
-            animation: pulse-animation 2s infinite;
-        }
+  /* ── Hero banner ── */
+  .hero {
+    grid-column: 1 / -1;
+    background: var(--bg2);
+    padding: 28px 32px 22px;
+    border-bottom: 1px solid var(--border2);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 80% at 80% 50%, rgba(0,212,255,0.04) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 10% 50%, rgba(136,68,255,0.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+  .hero-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 2rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    line-height: 1.1;
+    color: #fff;
+    position: relative;
+  }
+  .hero-title .accent { color: var(--cyan); text-shadow: 0 0 30px var(--cyan); }
+  .hero-sub {
+    margin-top: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    position: relative;
+  }
+  .hero-sub em { color: var(--green); font-style: normal; }
+  .hero-tags {
+    display: flex; gap: 10px; margin-top: 14px; position: relative;
+  }
+  .tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.68rem;
+    padding: 4px 10px;
+    border: 1px solid;
+    border-radius: 1px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .tag.cyan   { color: var(--cyan);   border-color: var(--cyan);   background: rgba(0,212,255,0.06); }
+  .tag.green  { color: var(--green);  border-color: var(--green);  background: rgba(0,255,136,0.06); }
+  .tag.purple { color: var(--purple); border-color: var(--purple); background: rgba(136,68,255,0.06); }
 
-        @keyframes pulse-animation {
-            0% { transform: scale(0.9); opacity: 1; }
-            70% { transform: scale(1.5); opacity: 0; }
-            100% { transform: scale(0.9); opacity: 0; }
-        }
+  /* ── Panel base ── */
+  .panel {
+    background: var(--panel);
+    padding: 18px 20px;
+  }
+  .panel-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel-title::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--cyan);
+    box-shadow: 0 0 6px var(--cyan);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
 
-        .btn {
-            background: rgba(128, 128, 128, 0.1);
-            border: 1px solid var(--glass-border);
-            color: var(--text-main);
-            padding: 0.8rem 1.5rem;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 700;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-size: 0.9rem;
-            backdrop-filter: blur(5px);
-        }
+  /* ── Left panel: tasks ── */
+  .tasks-panel { grid-row: 2; }
+  .task-card {
+    padding: 14px 15px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .task-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+  .task-card.easy::before   { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .task-card.medium::before { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+  .task-card.hard::before   { background: var(--red);   box-shadow: 0 0 8px var(--red);   }
+  .task-card:hover { border-color: var(--border2); background: rgba(13,36,64,0.6); }
+  .task-card.active { border-color: var(--cyan); background: rgba(0,212,255,0.04); }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-        }
+  .task-level {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .task-card.easy   .task-level { color: var(--green); }
+  .task-card.medium .task-level { color: var(--amber); }
+  .task-card.hard   .task-level { color: var(--red);   }
 
-        .btn.primary {
-            background: linear-gradient(45deg, var(--theme-primary), rgba(192, 132, 252, 0.5));
-            border-color: var(--theme-primary);
-            color: #fff;
-            box-shadow: var(--glow-primary);
-        }
+  .task-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #e0f0ff;
+    margin-bottom: 4px;
+  }
+  .task-desc {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+  .task-score {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .task-score-label { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: var(--text-dim); letter-spacing: 0.1em; }
+  .task-score-val   { font-family: 'Orbitron', monospace; font-size: 0.9rem; font-weight: 700; }
+  .task-card.easy   .task-score-val { color: var(--green);  text-shadow: 0 0 8px var(--green); }
+  .task-card.medium .task-score-val { color: var(--amber);  text-shadow: 0 0 8px var(--amber); }
+  .task-card.hard   .task-score-val { color: var(--cyan);   text-shadow: 0 0 8px var(--cyan); }
 
-        .btn.primary:hover {
-            opacity: 0.9;
-            box-shadow: 0 0 30px var(--theme-primary);
-        }
+  /* ── Center panel: main telemetry ── */
+  .center-panel {
+    grid-row: 2;
+    display: flex; flex-direction: column; gap: 1px;
+  }
 
-        /* Toggle Icon */
-        .theme-toggle {
-            background: transparent; border: 1px solid var(--glass-border);
-            color: var(--text-main); border-radius: 50%; width: 45px; height: 45px;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; font-size: 1.2rem;
-        }
-        .theme-toggle:hover { background: var(--glass-highlight); }
+  /* Cluster topology */
+  .topo-panel { flex: 0 0 auto; }
+  .node-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 5px;
+    margin-top: 4px;
+  }
+  .node-cell {
+    aspect-ratio: 1;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.5rem;
+    color: var(--text-dim);
+    transition: all 0.3s;
+    cursor: default;
+    position: relative;
+  }
+  .node-cell.online  { border-color: rgba(0,255,136,0.3); background: rgba(0,255,136,0.05); color: var(--green); }
+  .node-cell.offline { border-color: var(--red); background: rgba(255,51,102,0.1); color: var(--red);
+                       animation: node-blink 0.8s step-end infinite; }
+  .node-cell.suspect { border-color: var(--amber); background: rgba(255,170,0,0.08); color: var(--amber); }
+  .node-cell.drain   { border-color: var(--cyan); background: rgba(0,212,255,0.08); color: var(--cyan); }
+  @keyframes node-blink { 50% { opacity:0.3; } }
 
-        main {
-            flex: 1;
-            display: grid;
-            grid-template-columns: 1.2fr 2fr;
-            padding: 3rem;
-            gap: 2.5rem;
-            max-width: 1800px;
-            margin: 0 auto;
-            width: 100%;
-            z-index: 1;
-        }
+  /* Variance chart */
+  .variance-panel { flex: 0 0 auto; }
+  .variance-bars {
+    display: flex; gap: 4px; align-items: flex-end;
+    height: 80px; margin-top: 8px;
+  }
+  .v-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .v-bar {
+    width: 100%; border-radius: 1px 1px 0 0;
+    transition: height 0.5s ease, background 0.5s;
+    position: relative;
+  }
+  .v-bar.normal { background: linear-gradient(to top, var(--green), rgba(0,255,136,0.4)); }
+  .v-bar.spike  { background: linear-gradient(to top, var(--red), var(--amber));
+                  box-shadow: 0 0 12px var(--red); animation: spike-pulse 0.6s ease-in-out infinite alternate; }
+  @keyframes spike-pulse { from { opacity:0.7; } to { opacity:1; } }
+  .v-label { font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: var(--text-dim); }
 
-        /* Glass Panels */
-        .panel {
-            background: var(--glass-bg);
-            backdrop-filter: blur(28px);
-            -webkit-backdrop-filter: blur(28px);
-            border: 1px solid var(--glass-border);
-            border-top: 1px solid var(--glass-highlight);
-            border-radius: 20px;
-            padding: 2rem;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
-            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        
-        .panel:nth-child(2) { animation-delay: 0.1s; }
+  /* Log feed */
+  .log-panel { flex: 1; min-height: 160px; }
+  .log-feed {
+    height: 160px;
+    overflow-y: auto;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    line-height: 1.7;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+  }
+  .log-feed::-webkit-scrollbar { width: 4px; }
+  .log-feed::-webkit-scrollbar-thumb { background: var(--border2); }
+  .log-entry { padding: 1px 0; display: flex; gap: 8px; }
+  .log-entry .ts  { color: var(--text-dim); flex-shrink: 0; }
+  .log-entry.info .msg { color: var(--text); }
+  .log-entry.warn .msg { color: var(--amber); }
+  .log-entry.error .msg { color: var(--red); }
+  .log-entry.ok   .msg { color: var(--green); }
+  .log-entry.system .msg { color: var(--cyan); }
+  .log-entry { animation: log-in 0.3s ease; }
+  @keyframes log-in { from { opacity:0; transform: translateX(-6px); } to { opacity:1; transform: none; } }
 
-        @keyframes slideUp {
-            to { opacity: 1; transform: translateY(0); }
-        }
+  /* Action console */
+  .action-panel { flex: 0 0 auto; }
+  .action-form { display: flex; flex-direction: column; gap: 8px; }
+  .action-row  { display: flex; gap: 8px; }
+  select, input[type=text], input[type=number] {
+    flex: 1;
+    background: #020810;
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 7px 10px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    outline: none;
+    border-radius: 1px;
+    transition: border-color 0.2s;
+  }
+  select:focus, input:focus { border-color: var(--cyan); }
+  option { background: #020810; }
+  .btn {
+    padding: 8px 18px;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none;
+    border-radius: 1px;
+    transition: all 0.2s;
+  }
+  .btn-transmit {
+    background: var(--cyan);
+    color: #020810;
+    box-shadow: 0 0 16px rgba(0,212,255,0.3);
+  }
+  .btn-transmit:hover { background: var(--cyan2); box-shadow: 0 0 24px rgba(0,212,255,0.5); }
+  .btn-reset {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border2);
+  }
+  .btn-reset:hover { border-color: var(--amber); color: var(--amber); }
 
-        h2 {
-            margin-top: 0; font-size: 1.2rem; color: var(--theme-secondary);
-            padding-bottom: 1rem; border-bottom: 2px solid var(--glass-border);
-            text-transform: uppercase; letter-spacing: 2px;
-        }
+  /* ── Right panel ── */
+  .right-panel { grid-row: 2; display: flex; flex-direction: column; gap: 1px; }
 
-        /* Log Box */
-        .log-box {
-            background: var(--log-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            font-family: 'JetBrains Mono', 'Fira Code', monospace;
-            font-size: 1rem;
-            flex: 1; overflow-y: auto;
-            max-height: 600px;
-            box-shadow: inset 0 5px 20px rgba(0,0,0,0.2);
-            color: var(--text-main);
-        }
+  /* Reward meter */
+  .reward-display {
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 4px; padding: 20px 0;
+  }
+  .reward-big {
+    font-family: 'Orbitron', monospace;
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--green);
+    text-shadow: 0 0 30px var(--green);
+    line-height: 1;
+    transition: color 0.5s, text-shadow 0.5s;
+  }
+  .reward-big.partial { color: var(--amber); text-shadow: 0 0 30px var(--amber); }
+  .reward-big.zero    { color: var(--red);   text-shadow: 0 0 30px var(--red); }
+  .reward-label { font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.12em; }
 
-        .log-box::-webkit-scrollbar { width: 8px; }
-        .log-box::-webkit-scrollbar-track { background: transparent; }
-        .log-box::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
+  /* Step tracker */
+  .steps-row { display: flex; gap: 5px; flex-wrap: wrap; }
+  .step-dot {
+    width: 22px; height: 22px;
+    border-radius: 1px;
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    transition: all 0.3s;
+  }
+  .step-dot.done-ok   { background: rgba(0,255,136,0.15); border-color: var(--green); color: var(--green); }
+  .step-dot.done-fail { background: rgba(255,51,102,0.1); border-color: var(--red);   color: var(--red); }
+  .step-dot.active    { border-color: var(--cyan); color: var(--cyan); animation: pulse 1s infinite; }
 
-        .log-row { margin-bottom: 10px; line-height: 1.5; padding-left: 15px; text-indent: -15px; }
-        .system-log { color: var(--text-secondary); }
-        .error-log { color: var(--theme-danger); font-weight: bold; }
-        .action-log { color: var(--theme-primary); }
-        .highlight { color: var(--theme-accent); font-weight: bold; }
+  /* Metrics */
+  .metric-row { display: flex; justify-content: space-between; align-items: center;
+                padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-key { font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.08em; }
+  .metric-val { font-family: 'Orbitron', monospace; font-size: 0.82rem; font-weight: 700; color: var(--cyan); }
 
-        /* Metric Cards */
-        .metrics-grid {
-            display: grid; grid-template-columns: 1fr; gap: 1.2rem; margin-bottom: 2rem;
-        }
+  /* Queue depth bars */
+  .queue-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .queue-item { }
+  .queue-header { display: flex; justify-content: space-between;
+                  font-family: 'Share Tech Mono', monospace; font-size: 0.62rem;
+                  color: var(--text-dim); margin-bottom: 3px; }
+  .queue-bar-bg { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .queue-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+  .queue-bar-fill.low  { background: var(--green); box-shadow: 0 0 4px var(--green); }
+  .queue-bar-fill.mid  { background: var(--amber); box-shadow: 0 0 4px var(--amber); }
+  .queue-bar-fill.high { background: var(--red);   box-shadow: 0 0 6px var(--red);   animation: spike-pulse 0.5s infinite alternate; }
 
-        .metric-card {
-            background: rgba(128, 128, 128, 0.05);
-            border: 1px solid var(--glass-border);
-            padding: 1.2rem; border-radius: 12px;
-            display: flex; flex-direction: column; gap: 0.5rem;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .metric-card:hover {
-            transform: scale(1.01);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
+  /* ── Footer ── */
+  .footer {
+    grid-column: 1 / -1;
+    background: var(--bg2);
+    border-top: 1px solid var(--border2);
+    padding: 10px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+  }
+  .footer a { color: var(--cyan); text-decoration: none; }
+  .footer a:hover { text-shadow: 0 0 8px var(--cyan); }
 
-        .metric-title { font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; font-weight: bold; }
-
-        /* Arrays & Dicts */
-        .array-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; }
-        .array-badge {
-            background: var(--bg-color); border: 1px solid var(--glass-border);
-            padding: 5px 10px; border-radius: 8px; font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9rem; font-weight: 600;
-        }
-        .array-badge.danger {
-            background: rgba(244, 63, 94, 0.2); color: var(--theme-danger);
-            border-color: var(--theme-danger); box-shadow: 0 0 15px rgba(244, 63, 94, 0.4);
-            animation: flash 1s alternate infinite;
-        }
-
-        @keyframes flash { from { opacity: 0.8;} to {opacity: 1; transform: scale(1.05);}}
-
-        .dict-row { display: flex; justify-content: space-between; font-family: monospace; font-size: 1rem; padding: 6px 0; border-bottom: 1px dashed var(--glass-border); }
-        .dict-row:last-child { border-bottom: none; }
-        .dict-key { color: var(--theme-primary); font-weight: bold;}
-        .dict-val { color: var(--text-main); }
-        .dict-val.warn { color: var(--theme-accent); font-weight: bold; }
-
-        .reward-value { font-family: monospace; font-size: 2.5rem; font-weight: 900; color: var(--theme-secondary); }
-
-        /* Inputs */
-        input, select {
-            background: var(--bg-color); border: 1px solid var(--glass-border);
-            color: var(--text-main); padding: 1rem; border-radius: 10px;
-            font-family: 'Inter', sans-serif; font-size: 1rem;font-weight:600;
-            width: 100%; transition: all 0.3s;
-        }
-        input:focus, select:focus { outline: none; border-color: var(--theme-primary); box-shadow: var(--glow-primary); }
-
-        /* Modal */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.8); backdrop-filter: blur(15px);
-            z-index: 100; display: none; justify-content: center; align-items: flex-start;
-            padding-top: 8vh; opacity: 0; transition: opacity 0.3s; overflow-y: auto;
-        }
-        .modal-overlay.active { display: flex; opacity: 1; }
-
-        .modal-content {
-            background: var(--glass-bg); border: 1px solid var(--theme-primary);
-            box-shadow: var(--glow-primary); border-radius: 20px;
-            padding: 3rem; max-width: 800px; width: 90%; margin-bottom: 5vh;
-            color: var(--text-main);
-        }
-
-        .close-btn { position: absolute; top: 20px; right: 30px; font-size: 2rem; cursor: pointer; color: var(--text-secondary); }
-        .close-btn:hover { color: var(--theme-danger); }
-        code { background: var(--bg-color); padding: 4px 8px; border-radius: 6px; color: var(--theme-secondary); font-family: monospace; font-weight: bold;}
-        
-        @media (max-width: 1200px) { main { grid-template-columns: 1fr; } }
-    </style>
+  /* Scrollbar global */
+  * { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+</style>
 </head>
 <body>
-    <div class="particles"></div>
-    <header>
-        <h1><div class="pulse"></div>NetWeaver SRE</h1>
-        <div style="display:flex; align-items:center; gap: 1.5rem;">
-            <button class="btn" style="border-color: var(--theme-primary); color: var(--theme-primary);" onclick="toggleHelp()">How To Play</button>
-            <select id="levelSelect" style="width: auto; padding: 0.6rem;">
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard" selected>Hard</option>
-            </select>
-            <button class="btn primary" onclick="resetEnv()">System Reset</button>
-            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark Mode">🌓</button>
-        </div>
-    </header>
 
-    <main>
-        <section class="panel">
-            <h2>Live Telemetry</h2>
-            <div class="metrics-grid">
-                <div class="metric-card" style="border-left: 4px solid var(--theme-primary);">
-                    <span class="metric-title">Queue Depths</span>
-                    <div id="qDepthBox" style="margin-top: 10px;"><i>Initializing Telemetry...</i></div>
-                </div>
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-logo">NET<span>WEAVER</span> SRE</div>
+  <div class="topbar-status">
+    <div class="status-pill ok" id="sla-pill">SLA NOMINAL</div>
+    <div class="status-pill warn" id="cluster-pill">CLUSTER DEGRADED</div>
+    <div class="status-pill crit" id="incident-pill">INCIDENT ACTIVE</div>
+  </div>
+  <div class="topbar-clock" id="clock">--:--:-- UTC</div>
+</div>
 
-                <div class="metric-card" style="border-left: 4px solid var(--theme-secondary);">
-                    <span class="metric-title">Gradient Variances Array</span>
-                    <div id="gVarBox" class="array-container"><i>Initializing Array...</i></div>
-                </div>
+<!-- LAYOUT -->
+<div class="layout">
 
-                <div class="metric-card" style="border-left: 4px solid var(--theme-accent); flex-direction: row; align-items: center; justify-content: space-between;">
-                    <span class="metric-title" style="font-size: 1.1rem;">Evaluation Score</span>
-                    <span class="reward-value" id="rewardSpan">0.00</span>
-                </div>
-            </div>
-            
-            <div style="margin-top: auto;">
-                <h2>Action Override</h2>
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
-                    <select id="actionCmd">
-                        <option value="DRAIN_TRAFFIC">DRAIN_TRAFFIC</option>
-                        <option value="TUNE_PFC_THRESHOLD">TUNE_PFC_THRESHOLD</option>
-                        <option value="RUN_MINI_ITERATION">RUN_MINI_ITERATION</option>
-                    </select>
-                    <div style="display: flex; gap: 1rem;">
-                        <input type="text" id="actionTarget" placeholder="Target Node (e.g. node_97)">
-                        <input type="number" id="actionValue" placeholder="Value (Opt)" style="max-width: 150px;">
-                    </div>
-                    <button class="btn primary" onclick="sendAction()" style="padding: 1.2rem; font-size: 1rem; width: 100%;">EXECUTE INSTRUCTION</button>
-                </div>
-            </div>
-        </section>
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-title">AUTONOMOUS <span class="accent">INCIDENT TRIAGE</span></div>
+    <div class="hero-sub">
+      OpenEnv RL Benchmark &nbsp;·&nbsp; 100k-GPU Clos Topology &nbsp;·&nbsp;
+      <em>Real-World SRE Simulation</em>
+    </div>
+    <div class="hero-tags">
+      <span class="tag cyan">OpenEnv</span>
+      <span class="tag green">FastAPI · WebSocket</span>
+      <span class="tag purple">RL Environment</span>
+      <span class="tag cyan">3 Tasks</span>
+    </div>
+  </div>
 
-        <section class="panel">
-            <h2>System Logs Stream</h2>
-            <div class="log-box" id="logsBox">
-                <div class="log-row system-log">> System Boot Sequence Initiated...</div>
-            </div>
-        </section>
-    </main>
+  <!-- LEFT: TASKS -->
+  <div class="panel tasks-panel">
+    <div class="panel-title">Mission Objectives</div>
 
-    <!-- Help Modal -->
-    <div class="modal-overlay" id="helpModal" onclick="closeHelp(event)">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <span class="close-btn" onclick="toggleHelp()">&times;</span>
-            <h2 style="color: var(--theme-primary); border:none; padding:0; font-size: 1.8rem;">How To Play - SRE Triage</h2>
-            <div style="line-height: 1.8; margin-top: 1rem;">
-                <p><strong>Goal:</strong> Maintain the server cluster by triaging specific faults. Read the System Logs and Telemetry to pinpoint the issue and send exact Action Commands to resolve it efficiently for maximum reward.</p>
-                
-                <h3 style="color: var(--theme-secondary);">Easy Mode</h3>
-                <p>The log tells you which node crashed.<br><b>Solution:</b> Select <code>DRAIN_TRAFFIC</code>, input the exact node (e.g., <code>node_45</code>) into Target, and Execute.</p>
-
-                <h3 style="color: var(--theme-secondary);">Medium Mode</h3>
-                <p>A buffer overshoot happens! The logs give a Target integer.<br><b>Solution:</b> Select <code>TUNE_PFC_THRESHOLD</code>, enter the integer into <b>Value</b>. Execute.</p>
-
-                <h3 style="color: var(--theme-accent);">Hard Mode</h3>
-                <p>A NaN gradient breaks loose! The Telemetry Array will show a spike (e.g., <code>999.9</code>).<br>
-                <b>Step 1:</b> Count the index of the spike (0-15). Launch <code>RUN_MINI_ITERATION</code> with Target <code>"X-X"</code> (e.g., <code>"7-7"</code>).<br>
-                <b>Step 2:</b> The log confirms <code>node_XX</code>. Run <code>DRAIN_TRAFFIC</code> on that node!</p>
-            </div>
-        </div>
+    <div class="task-card easy active" onclick="selectTask('easy', this)">
+      <div class="task-level">⭐ Task 01 · Easy</div>
+      <div class="task-name">Node Offline Triage</div>
+      <div class="task-desc">Parse telemetry logs, identify the failed GPU node, issue DRAIN_TRAFFIC immediately.</div>
+      <div class="task-score">
+        <span class="task-score-label">Baseline Score</span>
+        <span class="task-score-val">1.00</span>
+      </div>
     </div>
 
-    <script>
-        const logsBox = document.getElementById('logsBox');
-        let currentTheme = 'dark';
-        
-        function toggleTheme() {
-            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', currentTheme);
-        }
+    <div class="task-card medium" onclick="selectTask('medium', this)">
+      <div class="task-level">⭐⭐ Task 02 · Medium</div>
+      <div class="task-name">PFC Buffer Tuning</div>
+      <div class="task-desc">Identify congestion threshold from logs. Issue TUNE_PFC_THRESHOLD with the exact integer.</div>
+      <div class="task-score">
+        <span class="task-score-label">Baseline Score</span>
+        <span class="task-score-val">0.88</span>
+      </div>
+    </div>
 
-        function toggleHelp() { document.getElementById('helpModal').classList.toggle('active'); }
-        function closeHelp() { document.getElementById('helpModal').classList.remove('active'); }
+    <div class="task-card hard" onclick="selectTask('hard', this)">
+      <div class="task-level">⭐⭐⭐ Task 03 · Hard</div>
+      <div class="task-name">Silent NaN Contagion</div>
+      <div class="task-desc">No logs. Inspect gradient variance spikes, run binary search iterations, drain the exact node.</div>
+      <div class="task-score">
+        <span class="task-score-label">Baseline Score</span>
+        <span class="task-score-val">0.74</span>
+      </div>
+    </div>
+  </div>
 
-        function appendLog(text, type='system-log') {
-            const el = document.createElement('div');
-            el.className = `log-row ${type}`;
-            let formatted = text.replace(/(node_\d+|[A-Z_]{5,}|NaN|\d+\.\d+)/g, '<span class="highlight">$1</span>');
-            el.innerHTML = `> ${formatted}`;
-            logsBox.appendChild(el);
-            logsBox.scrollTop = logsBox.scrollHeight;
-        }
+  <!-- CENTER -->
+  <div class="center-panel">
 
-        async function resetEnv() {
-            const level = document.getElementById('levelSelect').value;
-            logsBox.innerHTML = '';
-            appendLog(`[SYSTEM] INITIATING CLUSTER RESET (${level.toUpperCase()})`, 'action-log');
-            
-            try {
-                await fetch('/set_level', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({task_level: level}) });
-                const res = await fetch('/reset', { method: 'POST' });
-                const data = await res.json();
-                updateUI(data);
-            } catch (e) {
-                appendLog(`CRITICAL ERROR during reset: ${e.message}`, 'error-log');
-            }
-        }
+    <!-- Node topology -->
+    <div class="panel topo-panel">
+      <div class="panel-title">Cluster Topology — 100 Nodes</div>
+      <div class="node-grid" id="node-grid"></div>
+    </div>
 
-        async function sendAction() {
-            const action = {
-                command: document.getElementById('actionCmd').value,
-                target: document.getElementById('actionTarget').value
-            };
-            const val = document.getElementById('actionValue').value;
-            if (val) action.value = parseInt(val);
+    <!-- Variance chart -->
+    <div class="panel variance-panel">
+      <div class="panel-title">Gradient Variances — Rank 0-9</div>
+      <div class="variance-bars" id="variance-bars"></div>
+    </div>
 
-            appendLog(`[TX] Instruction Transmitted: ${JSON.stringify(action)}`, 'action-log');
-            
-            try {
-                const res = await fetch('/step', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action: action}) });
-                const data = await res.json();
-                updateUI(data);
-            } catch (e) { appendLog(`ERROR on execution: ${e.message}`, 'error-log'); }
-        }
+    <!-- Log feed -->
+    <div class="panel log-panel">
+      <div class="panel-title">System Telemetry Feed</div>
+      <div class="log-feed" id="log-feed"></div>
+    </div>
 
-        function updateUI(resData) {
-            const obs = resData.observation || {};
-            
-            if (obs.hardware_logs) { obs.hardware_logs.forEach(msg => appendLog(`[RX] ${msg}`)); }
+    <!-- Action console -->
+    <div class="panel action-panel">
+      <div class="panel-title">Command Transmitter</div>
+      <div class="action-form">
+        <div class="action-row">
+          <select id="cmd-select">
+            <option value="DRAIN_TRAFFIC">DRAIN_TRAFFIC</option>
+            <option value="TUNE_PFC_THRESHOLD">TUNE_PFC_THRESHOLD</option>
+            <option value="RUN_MINI_ITERATION">RUN_MINI_ITERATION</option>
+          </select>
+          <input type="text" id="cmd-target" placeholder="target (e.g. node_54)"/>
+          <input type="number" id="cmd-value" placeholder="value (opt)" style="max-width:100px"/>
+        </div>
+        <div class="action-row">
+          <button class="btn btn-transmit" onclick="transmitAction()">▶ Transmit</button>
+          <button class="btn btn-reset" onclick="resetEnv()">↺ Reset Episode</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-            const qBox = document.getElementById('qDepthBox');
-            qBox.innerHTML = '';
-            if (obs.queue_depths && Object.keys(obs.queue_depths).length) {
-                for (const [key, value] of Object.entries(obs.queue_depths)) {
-                    qBox.innerHTML += `<div class="dict-row"><span class="dict-key">${key}</span><span class="dict-val ${value > 50 ? 'warn' : ''}">${value.toFixed(1)}</span></div>`;
-                }
-            }
+  <!-- RIGHT -->
+  <div class="right-panel">
 
-            const gBox = document.getElementById('gVarBox');
-            gBox.innerHTML = '';
-            if (obs.gradient_variances && obs.gradient_variances.length) {
-                obs.gradient_variances.forEach(val => {
-                    gBox.innerHTML += `<span class="array-badge ${val > 500 ? 'danger' : ''}">${val.toFixed(2)}</span>`;
-                });
-            }
+    <!-- Reward -->
+    <div class="panel">
+      <div class="panel-title">Episode Reward</div>
+      <div class="reward-display">
+        <div class="reward-big" id="reward-big">0.00</div>
+        <div class="reward-label">CURRENT STEP REWARD</div>
+      </div>
+    </div>
 
-            document.getElementById('rewardSpan').innerText = (resData.reward || 0.0).toFixed(2);
-            
-            if (resData.done) {
-                appendLog(`[SYSTEM] EPISODE TERMINATED | FINAL REWARD: ${resData.reward}`, 'action-log');
-            }
-        }
+    <!-- Steps -->
+    <div class="panel">
+      <div class="panel-title">Step Trace</div>
+      <div class="steps-row" id="steps-row">
+        <!-- filled by JS -->
+      </div>
+    </div>
 
-        window.addEventListener('DOMContentLoaded', resetEnv);
-    </script>
+    <!-- Metrics -->
+    <div class="panel">
+      <div class="panel-title">Episode Metrics</div>
+      <div class="metric-row"><span class="metric-key">EPISODE</span><span class="metric-val" id="m-ep">001</span></div>
+      <div class="metric-row"><span class="metric-key">STEPS TAKEN</span><span class="metric-val" id="m-steps">0 / 10</span></div>
+      <div class="metric-row"><span class="metric-key">SYS HEALTH</span><span class="metric-val" id="m-health">1.00</span></div>
+      <div class="metric-row"><span class="metric-key">CUMULATIVE</span><span class="metric-val" id="m-cum">0.00</span></div>
+      <div class="metric-row"><span class="metric-key">MODE</span><span class="metric-val" id="m-mode">EASY</span></div>
+    </div>
+
+    <!-- Queue depths -->
+    <div class="panel">
+      <div class="panel-title">Network Queue Depths</div>
+      <div class="queue-list" id="queue-list"></div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <span>NetWeaver SRE · OpenEnv RL Challenge · <a href="https://github.com/PhoniciaAnne/netweaver-sre" target="_blank">GitHub</a></span>
+    <span id="footer-status">ENV STATUS: READY</span>
+    <span>Qwen/Qwen2.5-72B · Baseline: Easy 1.00 · Med 0.88 · Hard 0.74</span>
+  </div>
+
+</div>
+
+<script>
+// ── Clock ────────────────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toUTCString().split(' ').slice(4,5)[0] + ' UTC';
+}
+setInterval(updateClock, 1000); updateClock();
+
+// ── State ────────────────────────────────────────────────────────────────────
+let state = {
+  mode: 'EASY',
+  episode: 1,
+  step: 0,
+  maxSteps: 10,
+  cumReward: 0,
+  health: 1.0,
+  offlineNode: null,
+  spikeIndex: null,
+  steps: [],
+  queues: {},
+  variances: [],
+};
+
+// ── Node grid ────────────────────────────────────────────────────────────────
+function buildNodeGrid() {
+  const grid = document.getElementById('node-grid');
+  grid.innerHTML = '';
+  for (let i = 0; i < 100; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'node-cell online';
+    cell.id = 'node-' + i;
+    cell.title = 'node_' + i;
+    grid.appendChild(cell);
+  }
+}
+
+function setNodeState(idx, cls) {
+  const el = document.getElementById('node-' + idx);
+  if (el) el.className = 'node-cell ' + cls;
+}
+
+// ── Variance bars ─────────────────────────────────────────────────────────────
+function buildVarianceBars(variances, spikeIdx) {
+  const container = document.getElementById('variance-bars');
+  container.innerHTML = '';
+  const max = Math.max(...variances, 1);
+  variances.forEach((v, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'v-bar-wrap';
+    const pct = Math.min((v / max) * 70, 70);
+    const bar = document.createElement('div');
+    bar.className = 'v-bar ' + (i === spikeIdx ? 'spike' : 'normal');
+    bar.style.height = Math.max(pct, 3) + 'px';
+    const lbl = document.createElement('div');
+    lbl.className = 'v-label';
+    lbl.textContent = i;
+    wrap.appendChild(bar);
+    wrap.appendChild(lbl);
+    container.appendChild(wrap);
+  });
+}
+
+// ── Log feed ──────────────────────────────────────────────────────────────────
+function appendLog(msg, type='info') {
+  const feed = document.getElementById('log-feed');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry ' + type;
+  const now = new Date();
+  const ts = now.toTimeString().split(' ')[0];
+  entry.innerHTML = `<span class="ts">${ts}</span><span class="msg">${msg}</span>`;
+  feed.appendChild(entry);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+// ── Queue depths ──────────────────────────────────────────────────────────────
+function renderQueues(queues) {
+  const list = document.getElementById('queue-list');
+  list.innerHTML = '';
+  Object.entries(queues).forEach(([k, v]) => {
+    const pct = Math.min(v * 100, 100);
+    const cls = pct > 75 ? 'high' : pct > 45 ? 'mid' : 'low';
+    list.innerHTML += `
+      <div class="queue-item">
+        <div class="queue-header"><span>${k}</span><span>${v.toFixed(2)}</span></div>
+        <div class="queue-bar-bg"><div class="queue-bar-fill ${cls}" style="width:${pct}%"></div></div>
+      </div>`;
+  });
+}
+
+// ── Step dots ─────────────────────────────────────────────────────────────────
+function renderSteps() {
+  const row = document.getElementById('steps-row');
+  row.innerHTML = '';
+  for (let i = 1; i <= state.maxSteps; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'step-dot';
+    if (i < state.step)       dot.classList.add(state.steps[i-1] > 0 ? 'done-ok' : 'done-fail');
+    else if (i === state.step) dot.classList.add('active');
+    dot.textContent = i;
+    row.appendChild(dot);
+  }
+}
+
+// ── Reward display ────────────────────────────────────────────────────────────
+function setReward(r) {
+  const el = document.getElementById('reward-big');
+  el.textContent = r.toFixed(2);
+  el.className = 'reward-big' + (r >= 0.9 ? '' : r > 0 ? ' partial' : ' zero');
+}
+
+// ── Metrics update ────────────────────────────────────────────────────────────
+function updateMetrics() {
+  document.getElementById('m-ep').textContent     = String(state.episode).padStart(3,'0');
+  document.getElementById('m-steps').textContent  = `${state.step} / ${state.maxSteps}`;
+  document.getElementById('m-health').textContent = state.health.toFixed(2);
+  document.getElementById('m-cum').textContent    = state.cumReward.toFixed(2);
+  document.getElementById('m-mode').textContent   = state.mode;
+}
+
+// ── Init scenario ─────────────────────────────────────────────────────────────
+function initScenario(mode) {
+  state.mode        = mode.toUpperCase();
+  state.step        = 0;
+  state.cumReward   = 0;
+  state.health      = 1.0;
+  state.steps       = [];
+  state.offlineNode = Math.floor(Math.random() * 100);
+  state.spikeIndex  = Math.floor(Math.random() * 10);
+
+  // Rebuild variances
+  state.variances = Array.from({length:10}, () => Math.random() * 2 + 0.5);
+  if (mode === 'hard') state.variances[state.spikeIndex] = 999.9;
+
+  // Rebuild queues
+  state.queues = {};
+  ['sw_core_01','sw_leaf_07','sw_spine_03','sw_core_02'].forEach(k => {
+    state.queues[k] = mode === 'medium' ? Math.random() * 0.4 + 0.55 : Math.random() * 0.3 + 0.1;
+  });
+
+  buildNodeGrid();
+  if (mode === 'easy' || mode === 'hard') setNodeState(state.offlineNode, 'offline');
+  buildVarianceBars(state.variances, mode === 'hard' ? state.spikeIndex : -1);
+  renderQueues(state.queues);
+  setReward(0);
+  renderSteps();
+  updateMetrics();
+  document.getElementById('log-feed').innerHTML = '';
+
+  appendLog(`CLUSTER INIT — Running mode: ${state.mode}`, 'system');
+  if (mode === 'easy') {
+    appendLog(`NODE FAILURE DETECTED: node_${state.offlineNode} is OFFLINE`, 'error');
+    appendLog('ACTION REQUIRED: Issue DRAIN_TRAFFIC to isolate', 'warn');
+  } else if (mode === 'medium') {
+    appendLog('BUFFER CONGESTION WARNING: PFC threshold exceeded on sw_core_01', 'warn');
+    appendLog(`RECOMMENDED THRESHOLD: ${64 + Math.floor(Math.random()*6)*16}`, 'warn');
+  } else {
+    appendLog('SILENT NAN CONTAGION DETECTED in gradient sync layer', 'error');
+    appendLog('Hardware logs inconclusive — inspect gradient_variances array', 'warn');
+    appendLog(`Variance spike detected at index ${state.spikeIndex}: ${state.variances[state.spikeIndex].toFixed(1)}`, 'error');
+  }
+
+  document.getElementById('footer-status').textContent = `ENV STATUS: ${state.mode} EPISODE ${state.episode} — READY`;
+}
+
+// ── Task select ───────────────────────────────────────────────────────────────
+function selectTask(mode, el) {
+  document.querySelectorAll('.task-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  initScenario(mode);
+}
+
+// ── Transmit action ───────────────────────────────────────────────────────────
+function transmitAction() {
+  const cmd    = document.getElementById('cmd-select').value;
+  const target = document.getElementById('cmd-target').value.trim();
+  const val    = document.getElementById('cmd-value').value;
+
+  if (!target) { appendLog('ERROR: target field is required', 'error'); return; }
+
+  state.step++;
+  state.health = Math.max(0, state.health - 0.04);
+
+  let reward  = 0.0;
+  let done    = false;
+  let logType = 'info';
+
+  const mode = state.mode;
+
+  if (mode === 'EASY') {
+    if (cmd === 'DRAIN_TRAFFIC' && target === `node_${state.offlineNode}`) {
+      reward = Math.max(0.1, 1.0 - (state.step - 1) * 0.15);
+      done   = true; logType = 'ok';
+      setNodeState(state.offlineNode, 'drain');
+      appendLog(`TRIAGE COMPLETE: Traffic drained from node_${state.offlineNode}`, 'ok');
+    } else {
+      reward = -0.05; logType = 'warn';
+      appendLog(`INCORRECT TARGET: ${target} is not the offline node`, 'warn');
+    }
+  } else if (mode === 'MEDIUM') {
+    if (cmd === 'TUNE_PFC_THRESHOLD') {
+      const correct = parseInt(val) === 128;
+      reward = correct ? Math.max(0.1, 1.0 - (state.step-1)*0.12) : 0.5;
+      done   = correct || state.step >= state.maxSteps;
+      logType = correct ? 'ok' : 'warn';
+      appendLog(correct ? `PFC THRESHOLD SET: ${val} — Congestion resolved` : `THRESHOLD ${val} applied — partial relief`, logType);
+    } else { appendLog(`WRONG COMMAND for MEDIUM mode: use TUNE_PFC_THRESHOLD`, 'warn'); }
+  } else { // HARD
+    if (cmd === 'RUN_MINI_ITERATION') {
+      const [lo, hi] = target.split('-').map(Number);
+      if (lo === state.spikeIndex && hi === state.spikeIndex) {
+        appendLog(`TRIAGE CONFIRMED: NaN source is node_${state.offlineNode}`, 'ok');
+        setNodeState(state.offlineNode, 'suspect');
+        reward = 0.0;
+      } else {
+        appendLog(`RUN_MINI_ITERATION ${target}: No anomaly found in this sub-cluster`, 'info');
+      }
+    } else if (cmd === 'DRAIN_TRAFFIC') {
+      if (target === `node_${state.offlineNode}`) {
+        reward = Math.max(0.1, 1.0 - (state.step - 2) * 0.13);
+        done   = true; logType = 'ok';
+        setNodeState(state.offlineNode, 'drain');
+        appendLog(`NaN CONTAGION ISOLATED: node_${state.offlineNode} drained`, 'ok');
+      } else {
+        reward = -0.1;
+        appendLog(`WRONG NODE: ${target} is clean — NaN source still active`, 'error');
+      }
+    }
+  }
+
+  state.cumReward += reward;
+  state.steps.push(reward);
+  if (state.step >= state.maxSteps) done = true;
+
+  setReward(reward);
+  renderSteps();
+  updateMetrics();
+  appendLog(`CMD: ${cmd} → ${target}${val?' value='+val:''} | reward=${reward.toFixed(2)} done=${done}`, logType);
+
+  if (done) {
+    const success = state.cumReward > 0.1;
+    appendLog(`EPISODE END — success=${success} steps=${state.step} cumulative=${state.cumReward.toFixed(2)}`,
+              success ? 'ok' : 'error');
+    document.getElementById('footer-status').textContent =
+      `EPISODE ${state.episode} COMPLETE · ${success ? '✓ SUCCESS' : '✗ FAILED'}`;
+    document.getElementById(success ? 'sla-pill' : 'incident-pill').textContent =
+      success ? 'SLA RESTORED' : 'SLA BREACHED';
+  }
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+function resetEnv() {
+  state.episode++;
+  const active = document.querySelector('.task-card.active');
+  const mode = active ? active.querySelector('.task-level').textContent.toLowerCase().includes('easy') ? 'easy'
+               : active.querySelector('.task-level').textContent.toLowerCase().includes('medium') ? 'medium' : 'hard'
+               : 'easy';
+  initScenario(mode);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+initScenario('easy');
+</script>
 </body>
 </html>
