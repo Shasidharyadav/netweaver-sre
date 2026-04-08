@@ -7,22 +7,22 @@
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet"/>
 <style>
   :root {
-    --bg:        #020810;
-    --bg2:       #040d1a;
-    --panel:     #060f1e;
-    --border:    #0d2440;
-    --border2:   #1a3a5c;
-    --cyan:      #00d4ff;
-    --cyan2:     #00ffcc;
-    --green:     #00ff88;
-    --red:       #ff3366;
-    --amber:     #ffaa00;
-    --purple:    #8844ff;
-    --text:      #b0cce8;
-    --text-dim:  #4a6a8a;
-    --glow-c:    rgba(0,212,255,0.15);
-    --glow-g:    rgba(0,255,136,0.12);
-    --glow-r:    rgba(255,51,102,0.15);
+    --bg: #020810;
+    --bg2: #040d1a;
+    --panel: #060f1e;
+    --border: #0d2440;
+    --border2: #1a3a5c;
+    --cyan: #00d4ff;
+    --cyan2: #00ffcc;
+    --green: #00ff88;
+    --red: #ff3366;
+    --amber: #ffaa00;
+    --purple: #8844ff;
+    --text: #b0cce8;
+    --text-dim: #4a6a8a;
+    --glow-c: rgba(0,212,255,0.15);
+    --glow-g: rgba(0,255,136,0.12);
+    --glow-r: rgba(255,51,102,0.15);
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -90,10 +90,10 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
-  .status-pill.ok   { color: var(--green);  border-color: var(--green);  background: rgba(0,255,136,0.08); }
-  .status-pill.warn { color: var(--amber);  border-color: var(--amber);  background: rgba(255,170,0,0.08); }
-  .status-pill.crit { color: var(--red);    border-color: var(--red);    background: rgba(255,51,102,0.08);
-                      animation: blink 1s step-end infinite; }
+  .status-pill.ok { color: var(--green); border-color: var(--green); background: rgba(0,255,136,0.08); }
+  .status-pill.warn { color: var(--amber); border-color: var(--amber); background: rgba(255,170,0,0.08); }
+  .status-pill.crit { color: var(--red); border-color: var(--red); background: rgba(255,51,102,0.08);
+    animation: blink 1s step-end infinite; }
   @keyframes blink { 50% { opacity: 0; } }
 
   .topbar-clock {
@@ -102,346 +102,260 @@
     color: var(--text-dim);
   }
 
-  /* ── Main layout ── */
-  .layout {
-    display: grid;
-    grid-template-columns: 280px 1fr 320px;
-    grid-template-rows: auto 1fr auto;
-    gap: 1px;
-    background: var(--border);
-    min-height: calc(100vh - 52px);
+  /* ── HOW TO PLAY button ── */
+  .btn-howto {
+    padding: 5px 14px;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 1px solid var(--cyan);
+    border-radius: 2px;
+    background: rgba(0,212,255,0.06);
+    color: var(--cyan);
+    transition: all 0.2s;
+  }
+  .btn-howto:hover {
+    background: rgba(0,212,255,0.15);
+    box-shadow: 0 0 14px rgba(0,212,255,0.3);
+    color: #fff;
   }
 
-  /* ── Hero banner ── */
-  .hero {
-    grid-column: 1 / -1;
+  /* ── HOW TO PLAY Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(2,8,16,0.92);
+    z-index: 9000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.2s ease;
+  }
+  .modal-overlay.open { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .modal-box {
     background: var(--bg2);
-    padding: 28px 32px 22px;
-    border-bottom: 1px solid var(--border2);
+    border: 1px solid var(--border2);
+    border-top: 2px solid var(--cyan);
+    width: 720px;
+    max-width: 96vw;
+    max-height: 88vh;
+    overflow-y: auto;
+    padding: 32px 36px;
     position: relative;
-    overflow: hidden;
+    box-shadow: 0 0 60px rgba(0,212,255,0.12), 0 0 120px rgba(0,0,0,0.8);
+    animation: slideUp 0.25s ease;
   }
-  .hero-bg {
-    position: absolute; inset: 0;
-    background:
-      radial-gradient(ellipse 60% 80% at 80% 50%, rgba(0,212,255,0.04) 0%, transparent 70%),
-      radial-gradient(ellipse 40% 60% at 10% 50%, rgba(136,68,255,0.05) 0%, transparent 70%);
-    pointer-events: none;
-  }
-  .hero-grid {
-    position: absolute; inset: 0;
-    background-image:
-      linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-  }
-  .hero-title {
-    font-family: 'Orbitron', monospace;
-    font-size: 2rem;
-    font-weight: 900;
-    letter-spacing: 0.08em;
-    line-height: 1.1;
-    color: #fff;
-    position: relative;
-  }
-  .hero-title .accent { color: var(--cyan); text-shadow: 0 0 30px var(--cyan); }
-  .hero-sub {
-    margin-top: 8px;
+  @keyframes slideUp { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  .modal-box::-webkit-scrollbar { width: 4px; }
+  .modal-box::-webkit-scrollbar-thumb { background: var(--border2); }
+
+  .modal-close {
+    position: absolute; top: 16px; right: 20px;
     font-family: 'Share Tech Mono', monospace;
-    font-size: 0.78rem;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    cursor: pointer;
+    letter-spacing: 0.1em;
+    padding: 4px 10px;
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+  .modal-close:hover { color: var(--red); border-color: var(--red); }
+
+  .modal-header {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.3rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+  .modal-header .accent { color: var(--cyan); text-shadow: 0 0 20px var(--cyan); }
+
+  .modal-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
     color: var(--text-dim);
     letter-spacing: 0.06em;
-    position: relative;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
   }
-  .hero-sub em { color: var(--green); font-style: normal; }
-  .hero-tags {
-    display: flex; gap: 10px; margin-top: 14px; position: relative;
-  }
-  .tag {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.68rem;
-    padding: 4px 10px;
-    border: 1px solid;
-    border-radius: 1px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-  .tag.cyan   { color: var(--cyan);   border-color: var(--cyan);   background: rgba(0,212,255,0.06); }
-  .tag.green  { color: var(--green);  border-color: var(--green);  background: rgba(0,255,136,0.06); }
-  .tag.purple { color: var(--purple); border-color: var(--purple); background: rgba(136,68,255,0.06); }
 
-  /* ── Panel base ── */
-  .panel {
-    background: var(--panel);
-    padding: 18px 20px;
+  /* Overview section */
+  .htp-section {
+    margin-bottom: 24px;
   }
-  .panel-title {
+  .htp-section-title {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 0.68rem;
-    letter-spacing: 0.14em;
+    font-size: 0.65rem;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--text-dim);
-    margin-bottom: 14px;
+    margin-bottom: 12px;
     display: flex; align-items: center; gap: 8px;
   }
-  .panel-title::before {
+  .htp-section-title::before {
     content: '';
     display: inline-block;
     width: 6px; height: 6px;
     background: var(--cyan);
     box-shadow: 0 0 6px var(--cyan);
-    animation: pulse 2s ease-in-out infinite;
   }
-  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
 
-  /* ── Left panel: tasks ── */
-  .tasks-panel { grid-row: 2; }
-  .task-card {
-    padding: 14px 15px;
+  .htp-overview {
+    font-size: 0.9rem;
+    color: var(--text);
+    line-height: 1.65;
+  }
+  .htp-overview em { color: var(--cyan); font-style: normal; }
+
+  /* Task rule cards */
+  .task-rules {
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .task-rule-card {
     border: 1px solid var(--border);
     border-radius: 2px;
-    margin-bottom: 10px;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
+    padding: 16px 18px;
     position: relative;
     overflow: hidden;
+    background: var(--panel);
   }
-  .task-card::before {
+  .task-rule-card::before {
     content: '';
     position: absolute; left: 0; top: 0; bottom: 0;
     width: 3px;
   }
-  .task-card.easy::before   { background: var(--green); box-shadow: 0 0 8px var(--green); }
-  .task-card.medium::before { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
-  .task-card.hard::before   { background: var(--red);   box-shadow: 0 0 8px var(--red);   }
-  .task-card:hover { border-color: var(--border2); background: rgba(13,36,64,0.6); }
-  .task-card.active { border-color: var(--cyan); background: rgba(0,212,255,0.04); }
+  .task-rule-card.easy::before  { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .task-rule-card.medium::before { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+  .task-rule-card.hard::before  { background: var(--red);   box-shadow: 0 0 8px var(--red); }
 
-  .task-level {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.62rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    margin-bottom: 5px;
+  .trc-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
   }
-  .task-card.easy   .task-level { color: var(--green); }
-  .task-card.medium .task-level { color: var(--amber); }
-  .task-card.hard   .task-level { color: var(--red);   }
-
-  .task-name {
+  .trc-name {
     font-family: 'Rajdhani', sans-serif;
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 1.05rem;
     color: #e0f0ff;
-    margin-bottom: 4px;
   }
-  .task-desc {
-    font-size: 0.82rem;
-    color: var(--text-dim);
-    line-height: 1.4;
-  }
-  .task-score {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-top: 10px;
-    padding-top: 8px;
-    border-top: 1px solid var(--border);
-  }
-  .task-score-label { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: var(--text-dim); letter-spacing: 0.1em; }
-  .task-score-val   { font-family: 'Orbitron', monospace; font-size: 0.9rem; font-weight: 700; }
-  .task-card.easy   .task-score-val { color: var(--green);  text-shadow: 0 0 8px var(--green); }
-  .task-card.medium .task-score-val { color: var(--amber);  text-shadow: 0 0 8px var(--amber); }
-  .task-card.hard   .task-score-val { color: var(--cyan);   text-shadow: 0 0 8px var(--cyan); }
-
-  /* ── Center panel: main telemetry ── */
-  .center-panel {
-    grid-row: 2;
-    display: flex; flex-direction: column; gap: 1px;
-  }
-
-  /* Cluster topology */
-  .topo-panel { flex: 0 0 auto; }
-  .node-grid {
-    display: grid;
-    grid-template-columns: repeat(10, 1fr);
-    gap: 5px;
-    margin-top: 4px;
-  }
-  .node-cell {
-    aspect-ratio: 1;
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    display: flex; align-items: center; justify-content: center;
+  .trc-badge {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 0.5rem;
-    color: var(--text-dim);
-    transition: all 0.3s;
-    cursor: default;
-    position: relative;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    padding: 3px 9px;
+    border: 1px solid;
+    border-radius: 1px;
+    text-transform: uppercase;
   }
-  .node-cell.online  { border-color: rgba(0,255,136,0.3); background: rgba(0,255,136,0.05); color: var(--green); }
-  .node-cell.offline { border-color: var(--red); background: rgba(255,51,102,0.1); color: var(--red);
-                       animation: node-blink 0.8s step-end infinite; }
-  .node-cell.suspect { border-color: var(--amber); background: rgba(255,170,0,0.08); color: var(--amber); }
-  .node-cell.drain   { border-color: var(--cyan); background: rgba(0,212,255,0.08); color: var(--cyan); }
-  @keyframes node-blink { 50% { opacity:0.3; } }
+  .task-rule-card.easy  .trc-badge { color: var(--green); border-color: var(--green); background: rgba(0,255,136,0.07); }
+  .task-rule-card.medium .trc-badge { color: var(--amber); border-color: var(--amber); background: rgba(255,170,0,0.07); }
+  .task-rule-card.hard   .trc-badge { color: var(--red);   border-color: var(--red);   background: rgba(255,51,102,0.07); }
 
-  /* Variance chart */
-  .variance-panel { flex: 0 0 auto; }
-  .variance-bars {
-    display: flex; gap: 4px; align-items: flex-end;
-    height: 80px; margin-top: 8px;
+  .trc-steps {
+    display: flex; flex-direction: column; gap: 6px;
+    margin-top: 6px;
   }
-  .v-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
-  .v-bar {
-    width: 100%; border-radius: 1px 1px 0 0;
-    transition: height 0.5s ease, background 0.5s;
-    position: relative;
-  }
-  .v-bar.normal { background: linear-gradient(to top, var(--green), rgba(0,255,136,0.4)); }
-  .v-bar.spike  { background: linear-gradient(to top, var(--red), var(--amber));
-                  box-shadow: 0 0 12px var(--red); animation: spike-pulse 0.6s ease-in-out infinite alternate; }
-  @keyframes spike-pulse { from { opacity:0.7; } to { opacity:1; } }
-  .v-label { font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: var(--text-dim); }
-
-  /* Log feed */
-  .log-panel { flex: 1; min-height: 160px; }
-  .log-feed {
-    height: 160px;
-    overflow-y: auto;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
-    line-height: 1.7;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border2) transparent;
-  }
-  .log-feed::-webkit-scrollbar { width: 4px; }
-  .log-feed::-webkit-scrollbar-thumb { background: var(--border2); }
-  .log-entry { padding: 1px 0; display: flex; gap: 8px; }
-  .log-entry .ts  { color: var(--text-dim); flex-shrink: 0; }
-  .log-entry.info .msg { color: var(--text); }
-  .log-entry.warn .msg { color: var(--amber); }
-  .log-entry.error .msg { color: var(--red); }
-  .log-entry.ok   .msg { color: var(--green); }
-  .log-entry.system .msg { color: var(--cyan); }
-  .log-entry { animation: log-in 0.3s ease; }
-  @keyframes log-in { from { opacity:0; transform: translateX(-6px); } to { opacity:1; transform: none; } }
-
-  /* Action console */
-  .action-panel { flex: 0 0 auto; }
-  .action-form { display: flex; flex-direction: column; gap: 8px; }
-  .action-row  { display: flex; gap: 8px; }
-  select, input[type=text], input[type=number] {
-    flex: 1;
-    background: #020810;
-    border: 1px solid var(--border2);
+  .trc-step {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 0.85rem;
     color: var(--text);
-    padding: 7px 10px;
+    line-height: 1.45;
+  }
+  .trc-step-num {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    background: var(--border);
+    min-width: 20px;
+    height: 20px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .trc-step code {
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.78rem;
-    outline: none;
+    color: var(--cyan2);
+    background: rgba(0,255,204,0.07);
+    padding: 1px 5px;
     border-radius: 1px;
-    transition: border-color 0.2s;
   }
-  select:focus, input:focus { border-color: var(--cyan); }
-  option { background: #020810; }
-  .btn {
-    padding: 8px 18px;
-    font-family: 'Orbitron', monospace;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    cursor: pointer;
-    border: none;
-    border-radius: 1px;
-    transition: all 0.2s;
-  }
-  .btn-transmit {
-    background: var(--cyan);
-    color: #020810;
-    box-shadow: 0 0 16px rgba(0,212,255,0.3);
-  }
-  .btn-transmit:hover { background: var(--cyan2); box-shadow: 0 0 24px rgba(0,212,255,0.5); }
-  .btn-reset {
-    background: transparent;
-    color: var(--text-dim);
-    border: 1px solid var(--border2);
-  }
-  .btn-reset:hover { border-color: var(--amber); color: var(--amber); }
+  .trc-step .highlight { color: var(--amber); }
+  .trc-step .good { color: var(--green); }
+  .trc-step .bad { color: var(--red); }
 
-  /* ── Right panel ── */
-  .right-panel { grid-row: 2; display: flex; flex-direction: column; gap: 1px; }
-
-  /* Reward meter */
-  .reward-display {
-    display: flex; align-items: center; justify-content: center;
-    flex-direction: column; gap: 4px; padding: 20px 0;
-  }
-  .reward-big {
-    font-family: 'Orbitron', monospace;
-    font-size: 3rem;
-    font-weight: 900;
-    color: var(--green);
-    text-shadow: 0 0 30px var(--green);
-    line-height: 1;
-    transition: color 0.5s, text-shadow 0.5s;
-  }
-  .reward-big.partial { color: var(--amber); text-shadow: 0 0 30px var(--amber); }
-  .reward-big.zero    { color: var(--red);   text-shadow: 0 0 30px var(--red); }
-  .reward-label { font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.12em; }
-
-  /* Step tracker */
-  .steps-row { display: flex; gap: 5px; flex-wrap: wrap; }
-  .step-dot {
-    width: 22px; height: 22px;
-    border-radius: 1px;
-    border: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.55rem;
-    color: var(--text-dim);
-    transition: all 0.3s;
-  }
-  .step-dot.done-ok   { background: rgba(0,255,136,0.15); border-color: var(--green); color: var(--green); }
-  .step-dot.done-fail { background: rgba(255,51,102,0.1); border-color: var(--red);   color: var(--red); }
-  .step-dot.active    { border-color: var(--cyan); color: var(--cyan); animation: pulse 1s infinite; }
-
-  /* Metrics */
-  .metric-row { display: flex; justify-content: space-between; align-items: center;
-                padding: 8px 0; border-bottom: 1px solid var(--border); }
-  .metric-row:last-child { border-bottom: none; }
-  .metric-key { font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.08em; }
-  .metric-val { font-family: 'Orbitron', monospace; font-size: 0.82rem; font-weight: 700; color: var(--cyan); }
-
-  /* Queue depth bars */
-  .queue-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
-  .queue-item { }
-  .queue-header { display: flex; justify-content: space-between;
-                  font-family: 'Share Tech Mono', monospace; font-size: 0.62rem;
-                  color: var(--text-dim); margin-bottom: 3px; }
-  .queue-bar-bg { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
-  .queue-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
-  .queue-bar-fill.low  { background: var(--green); box-shadow: 0 0 4px var(--green); }
-  .queue-bar-fill.mid  { background: var(--amber); box-shadow: 0 0 4px var(--amber); }
-  .queue-bar-fill.high { background: var(--red);   box-shadow: 0 0 6px var(--red);   animation: spike-pulse 0.5s infinite alternate; }
-
-  /* ── Footer ── */
-  .footer {
-    grid-column: 1 / -1;
-    background: var(--bg2);
-    border-top: 1px solid var(--border2);
-    padding: 10px 28px;
-    display: flex; align-items: center; justify-content: space-between;
+  .trc-scoring {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 24px;
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.65rem;
-    color: var(--text-dim);
   }
-  .footer a { color: var(--cyan); text-decoration: none; }
-  .footer a:hover { text-shadow: 0 0 8px var(--cyan); }
+  .trc-score-item { display: flex; flex-direction: column; gap: 3px; }
+  .trc-score-label { color: var(--text-dim); letter-spacing: 0.08em; }
+  .trc-score-val { color: var(--cyan); font-size: 0.8rem; }
+  .task-rule-card.easy  .trc-score-val { color: var(--green); }
+  .task-rule-card.medium .trc-score-val { color: var(--amber); }
+  .task-rule-card.hard   .trc-score-val { color: var(--cyan); }
 
-  /* Scrollbar global */
-  * { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+  /* Commands reference */
+  .cmd-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    margin-top: 4px;
+  }
+  .cmd-table th {
+    text-align: left;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    font-weight: normal;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border2);
+  }
+  .cmd-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .cmd-table tr:last-child td { border-bottom: none; }
+  .cmd-name { color: var(--cyan2); }
+  .cmd-desc { color: var(--text); font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; line-height: 1.4; }
+  .cmd-task { color: var(--text-dim); }
+
+  /* Reward formula */
+  .reward-note {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--purple);
+    padding: 12px 16px;
+    border-radius: 2px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    line-height: 1.8;
+    color: var(--text);
+  }
+  .reward-note .formula { color: var(--purple); }
+  .reward-note .tip { color: var(--amber); }
+
+  /* Divider */
+  .modal-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
 </style>
 </head>
 <body>
@@ -454,8 +368,194 @@
     <div class="status-pill warn" id="cluster-pill">CLUSTER DEGRADED</div>
     <div class="status-pill crit" id="incident-pill">INCIDENT ACTIVE</div>
   </div>
-  <div class="topbar-clock" id="clock">--:--:-- UTC</div>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <button class="btn-howto" onclick="openHowTo()">? HOW TO PLAY</button>
+    <div class="topbar-clock" id="clock">--:--:-- UTC</div>
+  </div>
 </div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     HOW TO PLAY MODAL
+═══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="howto-modal" onclick="handleOverlayClick(event)">
+  <div class="modal-box">
+    <span class="modal-close" onclick="closeHowTo()">[ ESC ] CLOSE</span>
+
+    <div class="modal-header">HOW TO <span class="accent">PLAY</span></div>
+    <div class="modal-sub">
+      NetWeaver SRE · OpenEnv RL Benchmark · Autonomous Incident Triage Simulation
+    </div>
+
+    <!-- Overview -->
+    <div class="htp-section">
+      <div class="htp-section-title">Mission Overview</div>
+      <div class="htp-overview">
+        You are an <em>autonomous SRE agent</em> managing a simulated 100-GPU Clos network cluster.
+        Incidents occur — node failures, buffer congestion, silent NaN contagion — and your job is to
+        diagnose them from telemetry signals and issue the correct remediation command
+        <em>as quickly as possible</em>. Speed matters: each wasted step reduces your reward.
+        Each scenario runs for up to <em>10 steps</em>. Choose a task on the left, read the telemetry,
+        and transmit the right command.
+      </div>
+    </div>
+
+    <hr class="modal-divider"/>
+
+    <!-- Task rules -->
+    <div class="htp-section">
+      <div class="htp-section-title">Task Rules</div>
+      <div class="task-rules">
+
+        <!-- EASY -->
+        <div class="task-rule-card easy">
+          <div class="trc-header">
+            <div class="trc-name">⭐ Task 01 — Node Offline Triage</div>
+            <div class="trc-badge">Easy</div>
+          </div>
+          <div class="trc-steps">
+            <div class="trc-step">
+              <div class="trc-step-num">1</div>
+              <div>Read the <span class="highlight">System Telemetry Feed</span>. It will report which node is <span class="bad">OFFLINE</span> (e.g. <code>node_54</code>).</div>
+            </div>
+            <div class="trc-step">
+              <div class="trc-step-num">2</div>
+              <div>In the <span class="highlight">Cluster Topology</span> grid, the offline node blinks red — confirming the target.</div>
+            </div>
+            <div class="trc-step">
+              <div class="trc-step-num">3</div>
+              <div>Select command <code>DRAIN_TRAFFIC</code>, type the exact node name in the Target field (e.g. <code>node_54</code>), then hit <span class="good">▶ Transmit</span>.</div>
+            </div>
+            <div class="trc-step">
+              <div class="trc-step-num">4</div>
+              <div><span class="good">One correct step wins the episode.</span> Wrong targets incur a −0.05 penalty per step.</div>
+            </div>
+          </div>
+          <div class="trc-scoring">
+            <div class="trc-score-item"><div class="trc-score-label">Best Reward</div><div class="trc-score-val">1.00</div></div>
+            <div class="trc-score-item"><div class="trc-score-label">Penalty / step</div><div class="trc-score-val">−0.15</div></div>
+            <div class="trc-score-item"><div class="trc-score-label">Max Steps</div><div class="trc-score-val">10</div></div>
+          </div>
+        </div>
+
+        <!-- MEDIUM -->
+        <div class="task-rule-card medium">
+          <div class="trc-header">
+            <div class="trc-name">⭐⭐ Task 02 — PFC Buffer Tuning</div>
+            <div class="trc-badge">Medium</div>
+          </div>
+          <div class="trc-steps">
+            <div class="trc-step">
+              <div class="trc-step-num">1</div>
+              <div>The log feed shows a <span class="highlight">BUFFER CONGESTION WARNING</span> with a recommended threshold integer (e.g. <code>128</code>).</div>
+            </div>
+            <div class="trc-step">
+              <div class="trc-step-num">2</div>
+              <div>Check <span class="highlight">Network Queue Depths</span> — high bars confirm which switches are saturated.</div>
+            </div>
+            <div class="trc-step">
+              <div class="trc-step-num">3</div>
+              <div>Select <code>TUNE_PFC_THRESHOLD</code>, set Target to the congested switch (e.g. <code>sw_core_01</code>), and set Value to the exact integer from the log.</div>
+            </div>
+            <div class="trc-step">
+              <div class="trc-step-num">4</div>
+              <div>Exact match → <span class="good">full reward</span>. Wrong value → <span class="highlight">partial reward (0.50)</span>. Wrong command → no progress.</div>
+            </div>
+          </div>
+          <div class="trc-scoring">
+            <div class="trc-score-item"><div class="trc-score-label">Best Reward</div><div class="trc-score-val">0.88</div></div>
+            <div class="trc-score-item"><div class="trc-score-label">Partial Reward</div><div class="trc-score-val">0.50</div></div>
+            <div class="trc-score-item"><div class="trc-score-label">Penalty / step</div><div class="trc-score-val">−0.12</div></div>
+          </div>
+        </div>
+
+        <!-- HARD -->
+        <div class="task-rule-card hard">
+          <div class="trc-header">
+            <div class="trc-name">⭐⭐⭐ Task 03 — Silent NaN Contagion</div>
+            <div class="trc-badge">Hard</div>
+          </div>
+          <div class="trc-steps">
+            <div class="trc-step">
+              <div class="trc-step-num">1</div>
+              <div><span class="bad">No node logs.</span> Your only signal is the <span class="highlight">Gradient Variances</span> chart (ranks 0–9). One bar will spike dramatically — that's your suspect rank index.</div>
+            </div>
+            <div class="trc-step">
+              <div class="trc-step-num">2</div>
+              <div>Use <code>RUN_MINI_ITERATION</code> with Target set to a rank range (e.g. <code>3-3</code>) to confirm which rank index contains the NaN source. The log will respond with "anomaly found" or "none".</div>
+            </div>
+            <div class="trc-step">
+              <div class="trc-step-num">3</div>
+              <div>Once confirmed, switch to <code>DRAIN_TRAFFIC</code> and target the <span class="highlight">exact offline node</span> shown in the topology grid (which is tagged as suspect after confirmation).</div>
+            </div>
+            <div class="trc-step">
+              <div class="trc-step-num">4</div>
+              <div>Fewer binary-search steps = higher reward. Draining the wrong node incurs a <span class="bad">−0.10 penalty</span>.</div>
+            </div>
+          </div>
+          <div class="trc-scoring">
+            <div class="trc-score-item"><div class="trc-score-label">Best Reward</div><div class="trc-score-val">0.74</div></div>
+            <div class="trc-score-item"><div class="trc-score-label">Wrong drain</div><div class="trc-score-val">−0.10</div></div>
+            <div class="trc-score-item"><div class="trc-score-label">Penalty / step</div><div class="trc-score-val">−0.13</div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <hr class="modal-divider"/>
+
+    <!-- Command Reference -->
+    <div class="htp-section">
+      <div class="htp-section-title">Command Reference</div>
+      <table class="cmd-table">
+        <thead>
+          <tr>
+            <th>Command</th>
+            <th>Target</th>
+            <th>Value</th>
+            <th>Use In</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="cmd-name">DRAIN_TRAFFIC</td>
+            <td class="cmd-desc"><code>node_N</code> — the offline node</td>
+            <td class="cmd-desc">—</td>
+            <td class="cmd-task">Task 01, Task 03</td>
+          </tr>
+          <tr>
+            <td class="cmd-name">TUNE_PFC_THRESHOLD</td>
+            <td class="cmd-desc">Switch name (e.g. <code>sw_core_01</code>)</td>
+            <td class="cmd-desc">Integer from log</td>
+            <td class="cmd-task">Task 02</td>
+          </tr>
+          <tr>
+            <td class="cmd-name">RUN_MINI_ITERATION</td>
+            <td class="cmd-desc">Rank range e.g. <code>3-3</code> or <code>0-4</code></td>
+            <td class="cmd-desc">—</td>
+            <td class="cmd-task">Task 03 (search phase)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <hr class="modal-divider"/>
+
+    <!-- Scoring Tips -->
+    <div class="htp-section">
+      <div class="htp-section-title">Scoring &amp; Tips</div>
+      <div class="reward-note">
+        <span class="formula">reward = max(0.1,  base − (step − 1) × decay)</span><br/>
+        Decay varies by task (0.15 / 0.12 / 0.13). Act on step 1 for maximum reward.<br/><br/>
+        <span class="tip">TIP:</span> Use <b>↺ Reset Episode</b> to randomise the failing node / threshold between runs.<br/>
+        <span class="tip">TIP:</span> In Hard mode, use binary search — try range <code>0-4</code> first, then narrow.<br/>
+        <span class="tip">TIP:</span> Cumulative reward accumulates across steps; a failed episode still scores if partial rewards were earned.
+      </div>
+    </div>
+
+  </div>
+</div>
+<!-- END MODAL -->
 
 <!-- LAYOUT -->
 <div class="layout">
@@ -601,268 +701,614 @@
 
 </div>
 
+<style>
+  /* ── Main layout ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 280px 1fr 320px;
+    grid-template-rows: auto 1fr auto;
+    gap: 1px;
+    background: var(--border);
+    min-height: calc(100vh - 52px);
+  }
+
+  /* ── Hero banner ── */
+  .hero {
+    grid-column: 1 / -1;
+    background: var(--bg2);
+    padding: 28px 32px 22px;
+    border-bottom: 1px solid var(--border2);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 80% at 80% 50%, rgba(0,212,255,0.04) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 10% 50%, rgba(136,68,255,0.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+  .hero-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 2rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    line-height: 1.1;
+    color: #fff;
+    position: relative;
+  }
+  .hero-title .accent { color: var(--cyan); text-shadow: 0 0 30px var(--cyan); }
+  .hero-sub {
+    margin-top: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    position: relative;
+  }
+  .hero-sub em { color: var(--green); font-style: normal; }
+  .hero-tags {
+    display: flex; gap: 10px; margin-top: 14px; position: relative;
+  }
+  .tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.68rem;
+    padding: 4px 10px;
+    border: 1px solid;
+    border-radius: 1px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .tag.cyan { color: var(--cyan); border-color: var(--cyan); background: rgba(0,212,255,0.06); }
+  .tag.green { color: var(--green); border-color: var(--green); background: rgba(0,255,136,0.06); }
+  .tag.purple { color: var(--purple); border-color: var(--purple); background: rgba(136,68,255,0.06); }
+
+  /* ── Panel base ── */
+  .panel {
+    background: var(--panel);
+    padding: 18px 20px;
+  }
+  .panel-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel-title::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--cyan);
+    box-shadow: 0 0 6px var(--cyan);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+  /* ── Left panel: tasks ── */
+  .tasks-panel { grid-row: 2; }
+  .task-card {
+    padding: 14px 15px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .task-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+  .task-card.easy::before { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .task-card.medium::before { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+  .task-card.hard::before { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .task-card:hover { border-color: var(--border2); background: rgba(13,36,64,0.6); }
+  .task-card.active { border-color: var(--cyan); background: rgba(0,212,255,0.04); }
+
+  .task-level {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .task-card.easy .task-level { color: var(--green); }
+  .task-card.medium .task-level { color: var(--amber); }
+  .task-card.hard .task-level { color: var(--red); }
+
+  .task-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #e0f0ff;
+    margin-bottom: 4px;
+  }
+  .task-desc {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+  .task-score {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .task-score-label { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: var(--text-dim); letter-spacing: 0.1em; }
+  .task-score-val { font-family: 'Orbitron', monospace; font-size: 0.9rem; font-weight: 700; }
+  .task-card.easy .task-score-val { color: var(--green); text-shadow: 0 0 8px var(--green); }
+  .task-card.medium .task-score-val { color: var(--amber); text-shadow: 0 0 8px var(--amber); }
+  .task-card.hard .task-score-val { color: var(--cyan); text-shadow: 0 0 8px var(--cyan); }
+
+  /* ── Center panel ── */
+  .center-panel {
+    grid-row: 2;
+    display: flex; flex-direction: column; gap: 1px;
+  }
+
+  .topo-panel { flex: 0 0 auto; }
+  .node-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 5px;
+    margin-top: 4px;
+  }
+  .node-cell {
+    aspect-ratio: 1;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.5rem;
+    color: var(--text-dim);
+    transition: all 0.3s;
+    cursor: default;
+    position: relative;
+  }
+  .node-cell.online { border-color: rgba(0,255,136,0.3); background: rgba(0,255,136,0.05); color: var(--green); }
+  .node-cell.offline { border-color: var(--red); background: rgba(255,51,102,0.1); color: var(--red);
+    animation: node-blink 0.8s step-end infinite; }
+  .node-cell.suspect { border-color: var(--amber); background: rgba(255,170,0,0.08); color: var(--amber); }
+  .node-cell.drain { border-color: var(--cyan); background: rgba(0,212,255,0.08); color: var(--cyan); }
+  @keyframes node-blink { 50% { opacity:0.3; } }
+
+  .variance-panel { flex: 0 0 auto; }
+  .variance-bars {
+    display: flex; gap: 4px; align-items: flex-end;
+    height: 80px; margin-top: 8px;
+  }
+  .v-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .v-bar {
+    width: 100%; border-radius: 1px 1px 0 0;
+    transition: height 0.5s ease, background 0.5s;
+    position: relative;
+  }
+  .v-bar.normal { background: linear-gradient(to top, var(--green), rgba(0,255,136,0.4)); }
+  .v-bar.spike { background: linear-gradient(to top, var(--red), var(--amber));
+    box-shadow: 0 0 12px var(--red); animation: spike-pulse 0.6s ease-in-out infinite alternate; }
+  @keyframes spike-pulse { from { opacity:0.7; } to { opacity:1; } }
+  .v-label { font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: var(--text-dim); }
+
+  .log-panel { flex: 1; min-height: 160px; }
+  .log-feed {
+    height: 160px;
+    overflow-y: auto;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    line-height: 1.7;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+  }
+  .log-feed::-webkit-scrollbar { width: 4px; }
+  .log-feed::-webkit-scrollbar-thumb { background: var(--border2); }
+  .log-entry { padding: 1px 0; display: flex; gap: 8px; }
+  .log-entry .ts { color: var(--text-dim); flex-shrink: 0; }
+  .log-entry.info .msg { color: var(--text); }
+  .log-entry.warn .msg { color: var(--amber); }
+  .log-entry.error .msg { color: var(--red); }
+  .log-entry.ok .msg { color: var(--green); }
+  .log-entry.system .msg { color: var(--cyan); }
+  .log-entry { animation: log-in 0.3s ease; }
+  @keyframes log-in { from { opacity:0; transform: translateX(-6px); } to { opacity:1; transform: none; } }
+
+  .action-panel { flex: 0 0 auto; }
+  .action-form { display: flex; flex-direction: column; gap: 8px; }
+  .action-row { display: flex; gap: 8px; }
+  select, input[type=text], input[type=number] {
+    flex: 1;
+    background: #020810;
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 7px 10px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    outline: none;
+    border-radius: 1px;
+    transition: border-color 0.2s;
+  }
+  select:focus, input:focus { border-color: var(--cyan); }
+  option { background: #020810; }
+  .btn {
+    padding: 8px 18px;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none;
+    border-radius: 1px;
+    transition: all 0.2s;
+  }
+  .btn-transmit {
+    background: var(--cyan);
+    color: #020810;
+    box-shadow: 0 0 16px rgba(0,212,255,0.3);
+  }
+  .btn-transmit:hover { background: var(--cyan2); box-shadow: 0 0 24px rgba(0,212,255,0.5); }
+  .btn-reset {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border2);
+  }
+  .btn-reset:hover { border-color: var(--amber); color: var(--amber); }
+
+  /* ── Right panel ── */
+  .right-panel { grid-row: 2; display: flex; flex-direction: column; gap: 1px; }
+
+  .reward-display {
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 4px; padding: 20px 0;
+  }
+  .reward-big {
+    font-family: 'Orbitron', monospace;
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--green);
+    text-shadow: 0 0 30px var(--green);
+    line-height: 1;
+    transition: color 0.5s, text-shadow 0.5s;
+  }
+  .reward-big.partial { color: var(--amber); text-shadow: 0 0 30px var(--amber); }
+  .reward-big.zero { color: var(--red); text-shadow: 0 0 30px var(--red); }
+  .reward-label { font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.12em; }
+
+  .steps-row { display: flex; gap: 5px; flex-wrap: wrap; }
+  .step-dot {
+    width: 22px; height: 22px;
+    border-radius: 1px;
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    transition: all 0.3s;
+  }
+  .step-dot.done-ok { background: rgba(0,255,136,0.15); border-color: var(--green); color: var(--green); }
+  .step-dot.done-fail { background: rgba(255,51,102,0.1); border-color: var(--red); color: var(--red); }
+  .step-dot.active { border-color: var(--cyan); color: var(--cyan); animation: pulse 1s infinite; }
+
+  .metric-row { display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-key { font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.08em; }
+  .metric-val { font-family: 'Orbitron', monospace; font-size: 0.82rem; font-weight: 700; color: var(--cyan); }
+
+  .queue-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .queue-item { }
+  .queue-header { display: flex; justify-content: space-between;
+    font-family: 'Share Tech Mono', monospace; font-size: 0.62rem;
+    color: var(--text-dim); margin-bottom: 3px; }
+  .queue-bar-bg { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .queue-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+  .queue-bar-fill.low { background: var(--green); box-shadow: 0 0 4px var(--green); }
+  .queue-bar-fill.mid { background: var(--amber); box-shadow: 0 0 4px var(--amber); }
+  .queue-bar-fill.high { background: var(--red); box-shadow: 0 0 6px var(--red); animation: spike-pulse 0.5s infinite alternate; }
+
+  /* ── Footer ── */
+  .footer {
+    grid-column: 1 / -1;
+    background: var(--bg2);
+    border-top: 1px solid var(--border2);
+    padding: 10px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+  }
+  .footer a { color: var(--cyan); text-decoration: none; }
+  .footer a:hover { text-shadow: 0 0 8px var(--cyan); }
+
+  * { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+</style>
+
 <script>
-// ── Clock ────────────────────────────────────────────────────────────────────
-function updateClock() {
-  const now = new Date();
-  document.getElementById('clock').textContent =
-    now.toUTCString().split(' ').slice(4,5)[0] + ' UTC';
-}
-setInterval(updateClock, 1000); updateClock();
-
-// ── State ────────────────────────────────────────────────────────────────────
-let state = {
-  mode: 'EASY',
-  episode: 1,
-  step: 0,
-  maxSteps: 10,
-  cumReward: 0,
-  health: 1.0,
-  offlineNode: null,
-  spikeIndex: null,
-  steps: [],
-  queues: {},
-  variances: [],
-};
-
-// ── Node grid ────────────────────────────────────────────────────────────────
-function buildNodeGrid() {
-  const grid = document.getElementById('node-grid');
-  grid.innerHTML = '';
-  for (let i = 0; i < 100; i++) {
-    const cell = document.createElement('div');
-    cell.className = 'node-cell online';
-    cell.id = 'node-' + i;
-    cell.title = 'node_' + i;
-    grid.appendChild(cell);
+  // ── Modal ───────────────────────────────────────────────────────────────────
+  function openHowTo() {
+    document.getElementById('howto-modal').classList.add('open');
   }
-}
-
-function setNodeState(idx, cls) {
-  const el = document.getElementById('node-' + idx);
-  if (el) el.className = 'node-cell ' + cls;
-}
-
-// ── Variance bars ─────────────────────────────────────────────────────────────
-function buildVarianceBars(variances, spikeIdx) {
-  const container = document.getElementById('variance-bars');
-  container.innerHTML = '';
-  const max = Math.max(...variances, 1);
-  variances.forEach((v, i) => {
-    const wrap = document.createElement('div');
-    wrap.className = 'v-bar-wrap';
-    const pct = Math.min((v / max) * 70, 70);
-    const bar = document.createElement('div');
-    bar.className = 'v-bar ' + (i === spikeIdx ? 'spike' : 'normal');
-    bar.style.height = Math.max(pct, 3) + 'px';
-    const lbl = document.createElement('div');
-    lbl.className = 'v-label';
-    lbl.textContent = i;
-    wrap.appendChild(bar);
-    wrap.appendChild(lbl);
-    container.appendChild(wrap);
-  });
-}
-
-// ── Log feed ──────────────────────────────────────────────────────────────────
-function appendLog(msg, type='info') {
-  const feed = document.getElementById('log-feed');
-  const entry = document.createElement('div');
-  entry.className = 'log-entry ' + type;
-  const now = new Date();
-  const ts = now.toTimeString().split(' ')[0];
-  entry.innerHTML = `<span class="ts">${ts}</span><span class="msg">${msg}</span>`;
-  feed.appendChild(entry);
-  feed.scrollTop = feed.scrollHeight;
-}
-
-// ── Queue depths ──────────────────────────────────────────────────────────────
-function renderQueues(queues) {
-  const list = document.getElementById('queue-list');
-  list.innerHTML = '';
-  Object.entries(queues).forEach(([k, v]) => {
-    const pct = Math.min(v * 100, 100);
-    const cls = pct > 75 ? 'high' : pct > 45 ? 'mid' : 'low';
-    list.innerHTML += `
-      <div class="queue-item">
-        <div class="queue-header"><span>${k}</span><span>${v.toFixed(2)}</span></div>
-        <div class="queue-bar-bg"><div class="queue-bar-fill ${cls}" style="width:${pct}%"></div></div>
-      </div>`;
-  });
-}
-
-// ── Step dots ─────────────────────────────────────────────────────────────────
-function renderSteps() {
-  const row = document.getElementById('steps-row');
-  row.innerHTML = '';
-  for (let i = 1; i <= state.maxSteps; i++) {
-    const dot = document.createElement('div');
-    dot.className = 'step-dot';
-    if (i < state.step)       dot.classList.add(state.steps[i-1] > 0 ? 'done-ok' : 'done-fail');
-    else if (i === state.step) dot.classList.add('active');
-    dot.textContent = i;
-    row.appendChild(dot);
+  function closeHowTo() {
+    document.getElementById('howto-modal').classList.remove('open');
   }
-}
-
-// ── Reward display ────────────────────────────────────────────────────────────
-function setReward(r) {
-  const el = document.getElementById('reward-big');
-  el.textContent = r.toFixed(2);
-  el.className = 'reward-big' + (r >= 0.9 ? '' : r > 0 ? ' partial' : ' zero');
-}
-
-// ── Metrics update ────────────────────────────────────────────────────────────
-function updateMetrics() {
-  document.getElementById('m-ep').textContent     = String(state.episode).padStart(3,'0');
-  document.getElementById('m-steps').textContent  = `${state.step} / ${state.maxSteps}`;
-  document.getElementById('m-health').textContent = state.health.toFixed(2);
-  document.getElementById('m-cum').textContent    = state.cumReward.toFixed(2);
-  document.getElementById('m-mode').textContent   = state.mode;
-}
-
-// ── Init scenario ─────────────────────────────────────────────────────────────
-function initScenario(mode) {
-  state.mode        = mode.toUpperCase();
-  state.step        = 0;
-  state.cumReward   = 0;
-  state.health      = 1.0;
-  state.steps       = [];
-  state.offlineNode = Math.floor(Math.random() * 100);
-  state.spikeIndex  = Math.floor(Math.random() * 10);
-
-  // Rebuild variances
-  state.variances = Array.from({length:10}, () => Math.random() * 2 + 0.5);
-  if (mode === 'hard') state.variances[state.spikeIndex] = 999.9;
-
-  // Rebuild queues
-  state.queues = {};
-  ['sw_core_01','sw_leaf_07','sw_spine_03','sw_core_02'].forEach(k => {
-    state.queues[k] = mode === 'medium' ? Math.random() * 0.4 + 0.55 : Math.random() * 0.3 + 0.1;
+  function handleOverlayClick(e) {
+    if (e.target === document.getElementById('howto-modal')) closeHowTo();
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeHowTo();
   });
 
-  buildNodeGrid();
-  if (mode === 'easy' || mode === 'hard') setNodeState(state.offlineNode, 'offline');
-  buildVarianceBars(state.variances, mode === 'hard' ? state.spikeIndex : -1);
-  renderQueues(state.queues);
-  setReward(0);
-  renderSteps();
-  updateMetrics();
-  document.getElementById('log-feed').innerHTML = '';
+  // ── Clock ───────────────────────────────────────────────────────────────────
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('clock').textContent =
+      now.toUTCString().split(' ').slice(4,5)[0] + ' UTC';
+  }
+  setInterval(updateClock, 1000); updateClock();
 
-  appendLog(`CLUSTER INIT — Running mode: ${state.mode}`, 'system');
-  if (mode === 'easy') {
-    appendLog(`NODE FAILURE DETECTED: node_${state.offlineNode} is OFFLINE`, 'error');
-    appendLog('ACTION REQUIRED: Issue DRAIN_TRAFFIC to isolate', 'warn');
-  } else if (mode === 'medium') {
-    appendLog('BUFFER CONGESTION WARNING: PFC threshold exceeded on sw_core_01', 'warn');
-    appendLog(`RECOMMENDED THRESHOLD: ${64 + Math.floor(Math.random()*6)*16}`, 'warn');
-  } else {
-    appendLog('SILENT NAN CONTAGION DETECTED in gradient sync layer', 'error');
-    appendLog('Hardware logs inconclusive — inspect gradient_variances array', 'warn');
-    appendLog(`Variance spike detected at index ${state.spikeIndex}: ${state.variances[state.spikeIndex].toFixed(1)}`, 'error');
+  // ── State ───────────────────────────────────────────────────────────────────
+  let state = {
+    mode: 'EASY',
+    episode: 1,
+    step: 0,
+    maxSteps: 10,
+    cumReward: 0,
+    health: 1.0,
+    offlineNode: null,
+    spikeIndex: null,
+    steps: [],
+    queues: {},
+    variances: [],
+  };
+
+  // ── Node grid ───────────────────────────────────────────────────────────────
+  function buildNodeGrid() {
+    const grid = document.getElementById('node-grid');
+    grid.innerHTML = '';
+    for (let i = 0; i < 100; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'node-cell online';
+      cell.id = 'node-' + i;
+      cell.title = 'node_' + i;
+      grid.appendChild(cell);
+    }
   }
 
-  document.getElementById('footer-status').textContent = `ENV STATUS: ${state.mode} EPISODE ${state.episode} — READY`;
-}
+  function setNodeState(idx, cls) {
+    const el = document.getElementById('node-' + idx);
+    if (el) el.className = 'node-cell ' + cls;
+  }
 
-// ── Task select ───────────────────────────────────────────────────────────────
-function selectTask(mode, el) {
-  document.querySelectorAll('.task-card').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  initScenario(mode);
-}
+  // ── Variance bars ────────────────────────────────────────────────────────────
+  function buildVarianceBars(variances, spikeIdx) {
+    const container = document.getElementById('variance-bars');
+    container.innerHTML = '';
+    const max = Math.max(...variances, 1);
+    variances.forEach((v, i) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'v-bar-wrap';
+      const pct = Math.min((v / max) * 70, 70);
+      const bar = document.createElement('div');
+      bar.className = 'v-bar ' + (i === spikeIdx ? 'spike' : 'normal');
+      bar.style.height = Math.max(pct, 3) + 'px';
+      const lbl = document.createElement('div');
+      lbl.className = 'v-label';
+      lbl.textContent = i;
+      wrap.appendChild(bar);
+      wrap.appendChild(lbl);
+      container.appendChild(wrap);
+    });
+  }
 
-// ── Transmit action ───────────────────────────────────────────────────────────
-function transmitAction() {
-  const cmd    = document.getElementById('cmd-select').value;
-  const target = document.getElementById('cmd-target').value.trim();
-  const val    = document.getElementById('cmd-value').value;
+  // ── Log feed ─────────────────────────────────────────────────────────────────
+  function appendLog(msg, type='info') {
+    const feed = document.getElementById('log-feed');
+    const entry = document.createElement('div');
+    entry.className = 'log-entry ' + type;
+    const now = new Date();
+    const ts = now.toTimeString().split(' ')[0];
+    entry.innerHTML = `<span class="ts">${ts}</span><span class="msg">${msg}</span>`;
+    feed.appendChild(entry);
+    feed.scrollTop = feed.scrollHeight;
+  }
 
-  if (!target) { appendLog('ERROR: target field is required', 'error'); return; }
+  // ── Queue depths ─────────────────────────────────────────────────────────────
+  function renderQueues(queues) {
+    const list = document.getElementById('queue-list');
+    list.innerHTML = '';
+    Object.entries(queues).forEach(([k, v]) => {
+      const pct = Math.min(v * 100, 100);
+      const cls = pct > 75 ? 'high' : pct > 45 ? 'mid' : 'low';
+      list.innerHTML += `
+        <div class="queue-item">
+          <div class="queue-header"><span>${k}</span><span>${v.toFixed(2)}</span></div>
+          <div class="queue-bar-bg"><div class="queue-bar-fill ${cls}" style="width:${pct}%"></div></div>
+        </div>`;
+    });
+  }
 
-  state.step++;
-  state.health = Math.max(0, state.health - 0.04);
+  // ── Step dots ─────────────────────────────────────────────────────────────────
+  function renderSteps() {
+    const row = document.getElementById('steps-row');
+    row.innerHTML = '';
+    for (let i = 1; i <= state.maxSteps; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'step-dot';
+      if (i < state.step) dot.classList.add(state.steps[i-1] > 0 ? 'done-ok' : 'done-fail');
+      else if (i === state.step) dot.classList.add('active');
+      dot.textContent = i;
+      row.appendChild(dot);
+    }
+  }
 
-  let reward  = 0.0;
-  let done    = false;
-  let logType = 'info';
+  // ── Reward display ────────────────────────────────────────────────────────────
+  function setReward(r) {
+    const el = document.getElementById('reward-big');
+    el.textContent = r.toFixed(2);
+    el.className = 'reward-big' + (r >= 0.9 ? '' : r > 0 ? ' partial' : ' zero');
+  }
 
-  const mode = state.mode;
+  // ── Metrics update ────────────────────────────────────────────────────────────
+  function updateMetrics() {
+    document.getElementById('m-ep').textContent = String(state.episode).padStart(3,'0');
+    document.getElementById('m-steps').textContent = `${state.step} / ${state.maxSteps}`;
+    document.getElementById('m-health').textContent = state.health.toFixed(2);
+    document.getElementById('m-cum').textContent = state.cumReward.toFixed(2);
+    document.getElementById('m-mode').textContent = state.mode;
+  }
 
-  if (mode === 'EASY') {
-    if (cmd === 'DRAIN_TRAFFIC' && target === `node_${state.offlineNode}`) {
-      reward = Math.max(0.1, 1.0 - (state.step - 1) * 0.15);
-      done   = true; logType = 'ok';
-      setNodeState(state.offlineNode, 'drain');
-      appendLog(`TRIAGE COMPLETE: Traffic drained from node_${state.offlineNode}`, 'ok');
+  // ── Init scenario ─────────────────────────────────────────────────────────────
+  function initScenario(mode) {
+    state.mode = mode.toUpperCase();
+    state.step = 0;
+    state.cumReward = 0;
+    state.health = 1.0;
+    state.steps = [];
+    state.offlineNode = Math.floor(Math.random() * 100);
+    state.spikeIndex = Math.floor(Math.random() * 10);
+
+    state.variances = Array.from({length:10}, () => Math.random() * 2 + 0.5);
+    if (mode === 'hard') state.variances[state.spikeIndex] = 999.9;
+
+    state.queues = {};
+    ['sw_core_01','sw_leaf_07','sw_spine_03','sw_core_02'].forEach(k => {
+      state.queues[k] = mode === 'medium' ? Math.random() * 0.4 + 0.55 : Math.random() * 0.3 + 0.1;
+    });
+
+    buildNodeGrid();
+    if (mode === 'easy' || mode === 'hard') setNodeState(state.offlineNode, 'offline');
+    buildVarianceBars(state.variances, mode === 'hard' ? state.spikeIndex : -1);
+    renderQueues(state.queues);
+    setReward(0);
+    renderSteps();
+    updateMetrics();
+    document.getElementById('log-feed').innerHTML = '';
+
+    appendLog(`CLUSTER INIT — Running mode: ${state.mode}`, 'system');
+    if (mode === 'easy') {
+      appendLog(`NODE FAILURE DETECTED: node_${state.offlineNode} is OFFLINE`, 'error');
+      appendLog('ACTION REQUIRED: Issue DRAIN_TRAFFIC to isolate', 'warn');
+    } else if (mode === 'medium') {
+      appendLog('BUFFER CONGESTION WARNING: PFC threshold exceeded on sw_core_01', 'warn');
+      appendLog(`RECOMMENDED THRESHOLD: ${64 + Math.floor(Math.random()*6)*16}`, 'warn');
     } else {
-      reward = -0.05; logType = 'warn';
-      appendLog(`INCORRECT TARGET: ${target} is not the offline node`, 'warn');
+      appendLog('SILENT NAN CONTAGION DETECTED in gradient sync layer', 'error');
+      appendLog('Hardware logs inconclusive — inspect gradient_variances array', 'warn');
+      appendLog(`Variance spike detected at index ${state.spikeIndex}: ${state.variances[state.spikeIndex].toFixed(1)}`, 'error');
     }
-  } else if (mode === 'MEDIUM') {
-    if (cmd === 'TUNE_PFC_THRESHOLD') {
-      const correct = parseInt(val) === 128;
-      reward = correct ? Math.max(0.1, 1.0 - (state.step-1)*0.12) : 0.5;
-      done   = correct || state.step >= state.maxSteps;
-      logType = correct ? 'ok' : 'warn';
-      appendLog(correct ? `PFC THRESHOLD SET: ${val} — Congestion resolved` : `THRESHOLD ${val} applied — partial relief`, logType);
-    } else { appendLog(`WRONG COMMAND for MEDIUM mode: use TUNE_PFC_THRESHOLD`, 'warn'); }
-  } else { // HARD
-    if (cmd === 'RUN_MINI_ITERATION') {
-      const [lo, hi] = target.split('-').map(Number);
-      if (lo === state.spikeIndex && hi === state.spikeIndex) {
-        appendLog(`TRIAGE CONFIRMED: NaN source is node_${state.offlineNode}`, 'ok');
-        setNodeState(state.offlineNode, 'suspect');
-        reward = 0.0;
-      } else {
-        appendLog(`RUN_MINI_ITERATION ${target}: No anomaly found in this sub-cluster`, 'info');
-      }
-    } else if (cmd === 'DRAIN_TRAFFIC') {
-      if (target === `node_${state.offlineNode}`) {
-        reward = Math.max(0.1, 1.0 - (state.step - 2) * 0.13);
-        done   = true; logType = 'ok';
+
+    document.getElementById('footer-status').textContent = `ENV STATUS: ${state.mode} EPISODE ${state.episode} — READY`;
+  }
+
+  // ── Task select ───────────────────────────────────────────────────────────────
+  function selectTask(mode, el) {
+    document.querySelectorAll('.task-card').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    initScenario(mode);
+  }
+
+  // ── Transmit action ───────────────────────────────────────────────────────────
+  function transmitAction() {
+    const cmd = document.getElementById('cmd-select').value;
+    const target = document.getElementById('cmd-target').value.trim();
+    const val = document.getElementById('cmd-value').value;
+
+    if (!target) { appendLog('ERROR: target field is required', 'error'); return; }
+
+    state.step++;
+    state.health = Math.max(0, state.health - 0.04);
+
+    let reward = 0.0;
+    let done = false;
+    let logType = 'info';
+
+    const mode = state.mode;
+
+    if (mode === 'EASY') {
+      if (cmd === 'DRAIN_TRAFFIC' && target === `node_${state.offlineNode}`) {
+        reward = Math.max(0.1, 1.0 - (state.step - 1) * 0.15);
+        done = true; logType = 'ok';
         setNodeState(state.offlineNode, 'drain');
-        appendLog(`NaN CONTAGION ISOLATED: node_${state.offlineNode} drained`, 'ok');
+        appendLog(`TRIAGE COMPLETE: Traffic drained from node_${state.offlineNode}`, 'ok');
       } else {
-        reward = -0.1;
-        appendLog(`WRONG NODE: ${target} is clean — NaN source still active`, 'error');
+        reward = -0.05; logType = 'warn';
+        appendLog(`INCORRECT TARGET: ${target} is not the offline node`, 'warn');
       }
+    } else if (mode === 'MEDIUM') {
+      if (cmd === 'TUNE_PFC_THRESHOLD') {
+        const correct = parseInt(val) === 128;
+        reward = correct ? Math.max(0.1, 1.0 - (state.step-1)*0.12) : 0.5;
+        done = correct || state.step >= state.maxSteps;
+        logType = correct ? 'ok' : 'warn';
+        appendLog(correct ? `PFC THRESHOLD SET: ${val} — Congestion resolved` : `THRESHOLD ${val} applied — partial relief`, logType);
+      } else { appendLog(`WRONG COMMAND for MEDIUM mode: use TUNE_PFC_THRESHOLD`, 'warn'); }
+    } else { // HARD
+      if (cmd === 'RUN_MINI_ITERATION') {
+        const [lo, hi] = target.split('-').map(Number);
+        if (lo === state.spikeIndex && hi === state.spikeIndex) {
+          appendLog(`TRIAGE CONFIRMED: NaN source is node_${state.offlineNode}`, 'ok');
+          setNodeState(state.offlineNode, 'suspect');
+          reward = 0.0;
+        } else {
+          appendLog(`RUN_MINI_ITERATION ${target}: No anomaly found in this sub-cluster`, 'info');
+        }
+      } else if (cmd === 'DRAIN_TRAFFIC') {
+        if (target === `node_${state.offlineNode}`) {
+          reward = Math.max(0.1, 1.0 - (state.step - 2) * 0.13);
+          done = true; logType = 'ok';
+          setNodeState(state.offlineNode, 'drain');
+          appendLog(`NaN CONTAGION ISOLATED: node_${state.offlineNode} drained`, 'ok');
+        } else {
+          reward = -0.1;
+          appendLog(`WRONG NODE: ${target} is clean — NaN source still active`, 'error');
+        }
+      }
+    }
+
+    state.cumReward += reward;
+    state.steps.push(reward);
+    if (state.step >= state.maxSteps) done = true;
+
+    setReward(reward);
+    renderSteps();
+    updateMetrics();
+    appendLog(`CMD: ${cmd} → ${target}${val?' value='+val:''} | reward=${reward.toFixed(2)} done=${done}`, logType);
+
+    if (done) {
+      const success = state.cumReward > 0.1;
+      appendLog(`EPISODE END — success=${success} steps=${state.step} cumulative=${state.cumReward.toFixed(2)}`,
+        success ? 'ok' : 'error');
+      document.getElementById('footer-status').textContent =
+        `EPISODE ${state.episode} COMPLETE · ${success ? '✓ SUCCESS' : '✗ FAILED'}`;
+      document.getElementById(success ? 'sla-pill' : 'incident-pill').textContent =
+        success ? 'SLA RESTORED' : 'SLA BREACHED';
     }
   }
 
-  state.cumReward += reward;
-  state.steps.push(reward);
-  if (state.step >= state.maxSteps) done = true;
-
-  setReward(reward);
-  renderSteps();
-  updateMetrics();
-  appendLog(`CMD: ${cmd} → ${target}${val?' value='+val:''} | reward=${reward.toFixed(2)} done=${done}`, logType);
-
-  if (done) {
-    const success = state.cumReward > 0.1;
-    appendLog(`EPISODE END — success=${success} steps=${state.step} cumulative=${state.cumReward.toFixed(2)}`,
-              success ? 'ok' : 'error');
-    document.getElementById('footer-status').textContent =
-      `EPISODE ${state.episode} COMPLETE · ${success ? '✓ SUCCESS' : '✗ FAILED'}`;
-    document.getElementById(success ? 'sla-pill' : 'incident-pill').textContent =
-      success ? 'SLA RESTORED' : 'SLA BREACHED';
+  // ── Reset ─────────────────────────────────────────────────────────────────────
+  function resetEnv() {
+    state.episode++;
+    const active = document.querySelector('.task-card.active');
+    const mode = active ? active.querySelector('.task-level').textContent.toLowerCase().includes('easy') ? 'easy'
+      : active.querySelector('.task-level').textContent.toLowerCase().includes('medium') ? 'medium' : 'hard'
+      : 'easy';
+    initScenario(mode);
   }
-}
 
-// ── Reset ─────────────────────────────────────────────────────────────────────
-function resetEnv() {
-  state.episode++;
-  const active = document.querySelector('.task-card.active');
-  const mode = active ? active.querySelector('.task-level').textContent.toLowerCase().includes('easy') ? 'easy'
-               : active.querySelector('.task-level').textContent.toLowerCase().includes('medium') ? 'medium' : 'hard'
-               : 'easy';
-  initScenario(mode);
-}
-
-// ── Boot ──────────────────────────────────────────────────────────────────────
-initScenario('easy');
+  // ── Boot ──────────────────────────────────────────────────────────────────────
+  initScenario('easy');
 </script>
 </body>
 </html>
