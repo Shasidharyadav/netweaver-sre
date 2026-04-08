@@ -97,15 +97,16 @@ Defined in `models.py` as `NetweaverSreObservation(Observation)`:
 
 ---
 
-## 🏆 Baseline Performance
+## Baseline Performance
 
-Baseline evaluated with `Qwen/Qwen2.5-72B-Instruct` via `https://router.huggingface.co/v1`:
+Baseline evaluated with Qwen/Qwen2.5-72B-Instruct via https://router.huggingface.co/v1:
 
-| Task | Avg Steps | Avg Reward | Success Rate |
-|---|---|---|---|
-| Easy | 1.0 | 1.00 | 100% |
-| Medium | 1.2 | 0.88 | 90% |
-| Hard | 2.4 | 0.74 | 72% |
+| Task   | Avg Steps | Avg Reward | Success Rate |
+|--------|-----------|------------|--------------|
+| Easy   | 1.0       | 1.00       | 100%         |
+| Medium | 1.0       | 1.00       | 100%         |
+| Hard   | 2.5       | 0.94       | 100%         |
+| **Overall** | **1.5** | **0.98** | **100%** |
 
 **Example output (Easy):**
 ```
