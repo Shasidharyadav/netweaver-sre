@@ -75,105 +75,109 @@ def log_end(success: bool, steps: int, rewards: list) -> None:
     )
 
 # ── Main agent loop ───────────────────────────────────────────────────────────
-def run_agent():
-    # Optionally pin the task level on the server before connecting
-    if FORCE_LEVEL:
-        try:
-            import requests
-            requests.post(f"{ENV_URL}/set_level", json={"task_level": FORCE_LEVEL}, timeout=5)
-        except Exception:
-            pass  # non-fatal
+def run_episode(env, level: str) -> None:
+    """Run a single episode for the given level and emit START/STEP/END logs."""
+    import requests as _req
+
+    # Pin level on the server
+    try:
+        _req.post(f"{ENV_URL}/set_level", json={"task_level": level}, timeout=5)
+    except Exception:
+        pass
 
     rewards_list: list[float] = []
     steps_taken  = 0
     success      = False
 
+    obs_res      = env.reset()
+    obs          = obs_res.observation
+    current_mode = level.upper()
+    chat_history: list[dict] = []
+
+    log_start(task=f"{TASK_NAME}_{level}", env=BENCHMARK, model=MODEL_NAME)
+
     try:
-        with NetweaverSreEnv(base_url=ENV_URL).sync() as env:
-            obs_res      = env.reset()
-            obs          = obs_res.observation
-            current_mode = "EASY"
-            chat_history: list[dict] = []
+        while not obs.done:
+            steps_taken += 1
 
-            log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
+            # Detect task difficulty from cluster init log
+            for log in obs.hardware_logs:
+                if "Running mode:" in log:
+                    current_mode = log.split("Running mode:")[1].strip()
 
-            while not obs.done:
-                steps_taken += 1
-
-                # Detect task difficulty from cluster init log
-                for log in obs.hardware_logs:
-                    if "Running mode:" in log:
-                        current_mode = log.split("Running mode:")[1].strip()
-
-                # Build chat history (system prompt on first turn, updates thereafter)
-                if not chat_history:
-                    raw_prompt = PROMPTS.get(current_mode, PROMPTS["EASY"])
-                    system_msg = raw_prompt.format(
-                        logs=str(obs.hardware_logs),
-                        variances=str(obs.gradient_variances),
-                    )
-                    chat_history.append({"role": "user", "content": system_msg})
-                else:
-                    msg = f"New system logs after your last action: {obs.hardware_logs}."
-                    if current_mode == "HARD":
-                        msg += f" Gradient Variances: {obs.gradient_variances}."
-                    msg += " What is your next action JSON?"
-                    chat_history.append({"role": "user", "content": msg})
-
-                # LLM call
-                error_msg = None
-                try:
-                    ans      = client.chat.completions.create(
-                        model=MODEL_NAME,
-                        messages=chat_history,
-                        response_format={"type": "json_object"},
-                    )
-                    ai_reply = ans.choices[0].message.content
-                except Exception as e:
-                    ai_reply  = '{"command": "UNKNOWN", "target": ""}'
-                    error_msg = str(e)
-
-                chat_history.append({"role": "assistant", "content": ai_reply})
-
-                # Parse JSON action
-                try:
-                    payload = json.loads(ai_reply)
-                except json.JSONDecodeError:
-                    payload   = {"command": "UNKNOWN", "target": ""}
-                    error_msg = "JSONDecodeError"
-
-                action = NetweaverSreAction(
-                    command=payload.get("command", "UNKNOWN"),
-                    target=str(payload.get("target", "")),
-                    value=int(payload["value"]) if payload.get("value") is not None else None,
+            if not chat_history:
+                raw_prompt = PROMPTS.get(current_mode, PROMPTS["EASY"])
+                system_msg = raw_prompt.format(
+                    logs=str(obs.hardware_logs),
+                    variances=str(obs.gradient_variances),
                 )
+                chat_history.append({"role": "user", "content": system_msg})
+            else:
+                msg = f"New system logs after your last action: {obs.hardware_logs}."
+                if current_mode == "HARD":
+                    msg += f" Gradient Variances: {obs.gradient_variances}."
+                msg += " What is your next action JSON?"
+                chat_history.append({"role": "user", "content": msg})
 
-                obs_res = env.step(action)
-                obs     = obs_res.observation
-
-                reward = getattr(obs, "reward", None) or getattr(obs_res, "reward", 0.0) or 0.0
-                rewards_list.append(reward)
-                log_step(step=steps_taken, action=json.dumps(payload), reward=reward, done=obs.done, error=error_msg)
-
-            final_reward = rewards_list[-1] if rewards_list else 0.0
-            success      = final_reward > 0.1
-
-            log_end(success=success, steps=steps_taken, rewards=rewards_list)
-
-            # Save transcript quietly
-            import datetime, pathlib
-            pathlib.Path("logs").mkdir(exist_ok=True)
-            ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            with open(f"logs/transcript_{current_mode}_{ts}.json", "w") as f:
-                json.dump(
-                    {"mode": current_mode, "final_reward": final_reward, "chat_history": chat_history},
-                    f, indent=2,
+            error_msg = None
+            try:
+                ans      = client.chat.completions.create(
+                    model=MODEL_NAME,
+                    messages=chat_history,
+                    response_format={"type": "json_object"},
                 )
+                ai_reply = ans.choices[0].message.content
+            except Exception as e:
+                ai_reply  = '{"command": "UNKNOWN", "target": ""}'
+                error_msg = str(e)
 
-    except Exception as e:
-        # [END] must always be emitted, even on exception
+            chat_history.append({"role": "assistant", "content": ai_reply})
+
+            try:
+                payload = json.loads(ai_reply)
+            except json.JSONDecodeError:
+                payload   = {"command": "UNKNOWN", "target": ""}
+                error_msg = "JSONDecodeError"
+
+            action = NetweaverSreAction(
+                command=payload.get("command", "UNKNOWN"),
+                target=str(payload.get("target", "")),
+                value=int(payload["value"]) if payload.get("value") is not None else None,
+            )
+
+            obs_res = env.step(action)
+            obs     = obs_res.observation
+
+            reward = getattr(obs, "reward", None) or getattr(obs_res, "reward", 0.0) or 0.0
+            rewards_list.append(reward)
+            log_step(step=steps_taken, action=json.dumps(payload), reward=reward, done=obs.done, error=error_msg)
+
+        final_reward = rewards_list[-1] if rewards_list else 0.0
+        success      = final_reward > 0.1
+        log_end(success=success, steps=steps_taken, rewards=rewards_list)
+
+        # Save transcript
+        import datetime, pathlib
+        pathlib.Path("logs").mkdir(exist_ok=True)
+        ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        with open(f"logs/transcript_{current_mode}_{ts}.json", "w") as f:
+            json.dump(
+                {"mode": current_mode, "final_reward": final_reward, "chat_history": chat_history},
+                f, indent=2,
+            )
+
+    except Exception:
         log_end(success=False, steps=steps_taken, rewards=rewards_list)
         raise
+
+
+def run_agent():
+    """Run all 3 task levels in sequence so the validator sees 3 graded tasks."""
+    levels = ["easy", "medium", "hard"] if not FORCE_LEVEL else [FORCE_LEVEL]
+
+    with NetweaverSreEnv(base_url=ENV_URL).sync() as env:
+        for level in levels:
+            run_episode(env, level)
 
 
 if __name__ == "__main__":

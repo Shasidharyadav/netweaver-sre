@@ -96,11 +96,11 @@ class NetweaverSreEnvironment(Environment):
                 logs.append(f"SUCCESS: Faulty node {tgt} isolated.")
                 step_penalty = 0.05 if task == "hard" else 0.1
                 raw_score = 1.0 - ((_GLOBAL_CACHE["state"].step_count - 1) * step_penalty)
-                reward = max(0.0, round(raw_score, 2))
+                reward = min(0.99, max(0.01, round(raw_score, 2)))
                 done = True
             else:
                 logs.append(f"ERROR: Drained healthy node {tgt}.")
-                reward = -0.2
+                reward = 0.01
 
         elif cmd == "TUNE_PFC_THRESHOLD":
             if task == "medium":
@@ -113,7 +113,7 @@ class NetweaverSreEnvironment(Environment):
                     if distance <= 5.0: # Agent tuned it close enough
                         logs.append("SUCCESS: Congestion fully mitigated.")
                         raw_score = 1.0 - ((_GLOBAL_CACHE["state"].step_count - 1) * 0.1)
-                        reward = max(0.0, round(raw_score, 2))
+                        reward = min(0.99, max(0.01, round(raw_score, 2)))
                         done = True
                     else:
                         logs.append(f"INFO: Network partially relieved. Still experiencing collision.")
@@ -147,7 +147,7 @@ class NetweaverSreEnvironment(Environment):
         if _GLOBAL_CACHE["state"].step_count >= self.MAX_ATTEMPTS and not done:
             logs.append("SLA BREACH: Timeout limit reached.")
             done = True
-            reward = 0.0
+            reward = 0.01
 
         return self._get_obs(done, reward)
 
