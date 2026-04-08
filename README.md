@@ -201,17 +201,3 @@ netweaver-sre/
 ```
 
 ---
-
-## 📋 OpenEnv Compliance Checklist
-
-- [x] Real-world task (SRE incident triage)
-- [x] Pydantic `Action` and `Observation` models
-- [x] `step()`, `reset()`, `state()` interface
-- [x] `openenv.yaml` metadata file
-- [x] 3 tasks with programmatic graders (Easy / Medium / Hard)
-- [x] Incremental rewards (step-decay penalty)
-- [x] Baseline inference script (`inference.py`) in root
-- [x] OpenAI client with `API_BASE_URL`, `MODEL_NAME`, `HF_TOKEN`
-- [x] `[START]` / `[STEP]` / `[END]` stdout format
-- [x] Dockerfile + HF Space deployment
-- [x] Tagged `openenv`
