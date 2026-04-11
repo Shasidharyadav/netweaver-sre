@@ -15,6 +15,8 @@ Endpoints:
     - POST /step: Execute an action
     - GET /state: Get current environment state
     - GET /schema: Get action/observation schemas
+    - POST /set_level: Pin task difficulty
+    - POST /grader: Deterministic grader endpoint
     - WS /ws: WebSocket endpoint for persistent sessions
 
 Usage:
@@ -37,10 +39,10 @@ except Exception as e:  # pragma: no cover
 
 try:
     from ..models import NetweaverSreAction, NetweaverSreObservation
-    from .netweaver_sre_environment import NetweaverSreEnvironment, set_task_level
+    from .netweaver_sre_environment import NetweaverSreEnvironment, set_task_level, _GLOBAL_CACHE
 except (ModuleNotFoundError, ImportError):
     from models import NetweaverSreAction, NetweaverSreObservation
-    from server.netweaver_sre_environment import NetweaverSreEnvironment, set_task_level
+    from server.netweaver_sre_environment import NetweaverSreEnvironment, set_task_level, _GLOBAL_CACHE
 
 
 # Create the app with web interface and README integration
@@ -72,6 +74,28 @@ async def configure_task_level(request: Request):
         return {"error": f"Invalid level '{level}'. Choose: easy, medium, hard"}
     set_task_level(level)
     return {"success": True, "task_level": level or "random"}
+
+
+@app.post("/grader")
+async def grader_endpoint(request: Request):
+    """Deterministic grader endpoint.
+    
+    Returns the last computed grader score, clamped strictly to (0.001, 0.999).
+    This is referenced by the grader.endpoint field in openenv.yaml.
+    """
+    score = _GLOBAL_CACHE.get("last_grader_score", 0.001)
+    # Ensure score is a pure Python float, strictly in (0, 1)
+    score = float(score) if score is not None else 0.001
+    score = max(0.001, min(0.999, score))
+    
+    print(f"[GRADER] score={score} type={type(score).__name__}", flush=True)
+    
+    return {
+        "score": score,
+        "grader_score": score,
+        "resolved": score > 0.1,
+        "feedback": f"Task score: {score:.3f}",
+    }
 
 
 def main(host: str = "0.0.0.0", port: int = 8000):

@@ -5,3 +5,34 @@ runtime: fastapi
 app: server.app:app
 port: 7860
 
+tasks:
+  - id: netweaver_sre_easy
+    difficulty: easy
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      Identify and drain traffic from an offline node in a 100k GPU cluster.
+      The agent must parse hardware logs to find the faulty node name and
+      issue a DRAIN_TRAFFIC command targeting that specific node.
+
+  - id: netweaver_sre_medium
+    difficulty: medium
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      Diagnose buffer congestion on a network spine and tune the PFC
+      threshold to mitigate the issue. The agent must identify the correct
+      threshold value from system logs and apply it via TUNE_PFC_THRESHOLD.
+
+  - id: netweaver_sre_hard
+    difficulty: hard
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      Locate and isolate a NaN-producing node causing gradient divergence
+      across the cluster. The agent must perform binary search triage using
+      RUN_MINI_ITERATION to pinpoint the faulty sub-cluster, then drain
+      the specific node once identified.
