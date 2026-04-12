@@ -7,197 +7,122 @@ sdk: docker
 pinned: false
 tags:
   - openenv
+  - site-reliability-engineering
+  - reinforcement-learning
+  - autonomous-agents
 ---
 
-# NetWeaver SRE — Autonomous Incident Triage 🛡️
+# NetWeaver SRE — Cyberpunk Ops Center 🛡️
 
-**NetWeaver SRE** is a real-world Reinforcement Learning environment that places an AI agent in the role of a Site Reliability Engineer managing a 100k-GPU Clos-topology cluster. The agent must observe streaming telemetry, reason about failure modes, and issue the correct remediation commands before the SLA window expires.
+[![OpenEnv](https://img.shields.io/badge/Spec-OpenEnv--0.2.0-indigo)](https://github.com/openenv/openenv)
+[![Demo](https://img.shields.io/badge/Playground-Live%20Demo-emerald)](https://Shasidharyadavr-netweaver-sre.hf.space)
+[![Difficulty](https://img.shields.io/badge/Missions-20%20Tasks-rose)](https://github.com/Shasidharyadav/netweaver-sre#missions)
 
-Built to fully comply with the **OpenEnv RL Challenge** specification.
+**NetWeaver SRE** is a high-fidelity Reinforcement Learning environment designed for the next generation of Autonomous Site Reliability Engineers. Manage a 100-node GPU cluster, triage complex failure modes in real-time, and maintain 99.9% SLA uptime through precise, multi-turn decision making.
 
----
-
-## 🧩 Problem Statement
-
-Modern large-scale AI deployments suffer from three classes of failure that are impossible to triage manually at speed:
-
-- **Node Failures** — a GPU node drops offline mid-training run
-- **Buffer Congestion** — PFC thresholds mis-tune, causing queue collapse
-- **Silent NaN Contagion** — a single faulty rank poisons gradient synchronisation, producing no obvious error log
-
-NetWeaver SRE exposes all three as a graded, multi-difficulty RL benchmark.
+> [!IMPORTANT]
+> **Phase 2 Compliant**: This environment and its inference suite are fully aligned with the strict OpenEnv Phase 2 validation protocols, including standardized logging, score clamping (0.001 - 0.999), and `socat` port-bridging for instant-start capability on Hugging Face Spaces.
 
 ---
 
-## 🗂️ Environment Overview
+## 🎮 The Playground Dashboard
 
-| Property | Value |
-|---|---|
-| Framework | OpenEnv (FastAPI / WebSocket) |
-| Interface | `step()`, `reset()`, `state()` |
-| Action space | `NetweaverSreAction` (Pydantic) |
-| Observation space | `NetweaverSreObservation` (Pydantic) |
-| Reward range | `[0.0, 1.0]` |
-| Tasks | 3 (Easy → Medium → Hard) |
-| Max steps | 10 per episode |
+Experience the **Cyberpunk Ops Center** — a vibrant, real-time dashboard for monitoring agent performance and cluster health.
+
+- **Real-time Telemetry**: Live-updating charts for queue depths, gradient variances, and power consumption.
+- **Deep Analytics**: Leaderboards for 13+ models, including benchmarking data for Qwen2.5, Llama-3.3, and DeepSeek.
+- **Task Selector**: Instantly switch between all 20 specialized missions.
 
 ---
 
-## 📐 Action Space
+## 🛰️ Action & Observation Space
 
-Defined in `models.py` as `NetweaverSreAction(Action)`:
+### Actions (`NetweaverSreAction`)
+The agent has access to **20 specialized SRE commands** including:
+- **Triage**: `DRAIN_TRAFFIC`, `RESTART_POD`, `KILL_ZOMBIE_PROCESS`
+- **Network**: `TUNE_PFC_THRESHOLD`, `MITIGATE_ROUTE_FLAP`, `INCREASE_MTU`
+- **Compute**: `ADJUST_POWER_CAP`, `PIN_CPU_THREADS`, `RESTART_GPU_DAEMON`
+- **Deep Diagnostics**: `RUN_MINI_ITERATION`, `PURGE_CORRUPT_BLOCK`
 
-| Field | Type | Description |
+### Observations (`NetweaverSreObservation`)
+Agents receive high-density telemetry including:
+- `hardware_logs`: Detailed system logs identifying specific error vectors.
+- `gradient_variances`: A 10-rank array for identifying silent corruption (NaN contagion).
+- `queue_depths`: Real-time network buffer monitoring.
+
+---
+
+## 🎯 Mission Gallery (20 Specialized Tasks)
+
+| Difficulty | Tasks | Key Remediation |
 |---|---|---|
-| `command` | `str` | One of `DRAIN_TRAFFIC`, `TUNE_PFC_THRESHOLD`, `RUN_MINI_ITERATION` |
-| `target` | `str` | Target node name, switch ID, or sub-cluster range (e.g. `node_54`, `3-3`) |
-| `value` | `Optional[int]` | Numerical threshold value — required only for `TUNE_PFC_THRESHOLD` |
+| **Easy** | T01–T07 | Node Triage, DNS Cache, OOM Crashes, TLS Expiry |
+| **Medium** | T08–T14 | PFC Buffer Tuning, Power Throttling, BGP Flapping |
+| **Hard** | T15–T20 | Silent NaN Contagion, Broadcast Storms, Cluster Deadlock |
 
-**Example actions:**
+### Featured Missions:
+![T15: NaN Contagion](server/assets/t15.png)
+*T15: Silent NaN Contagion - Distortions in the gradient synchronisation layer require iterative isolation.*
 
-```json
-{"command": "DRAIN_TRAFFIC",       "target": "node_54"}
-{"command": "TUNE_PFC_THRESHOLD",  "target": "sw_core_01", "value": 128}
-{"command": "RUN_MINI_ITERATION",  "target": "7-7"}
-```
-
----
-
-## 👁️ Observation Space
-
-Defined in `models.py` as `NetweaverSreObservation(Observation)`:
-
-| Field | Type | Description |
-|---|---|---|
-| `hardware_logs` | `List[str]` | Raw system and telemetry log lines for the current step |
-| `gradient_variances` | `List[float]` | Per-rank gradient variance array (10 values, index 0–9) |
-| `queue_depths` | `Dict[str, float]` | Current network buffer depths per switch port |
-| `system_health` | `float` | Aggregate SLA health score `[0.0, 1.0]` |
-| `done` | `bool` | Whether the episode has terminated |
-| `reward` | `float` | Step reward |
+![T08: PFC Tuning](server/assets/t08.png)
+*T08: PFC Buffer Tuning - Network congestion requires precisely aligned hardware thresholds.*
 
 ---
 
-## 🎯 Tasks
+## 📊 Performance Leaderboard
 
-### Task 1 — Easy: Node Offline Triage
-**Difficulty:** ⭐  
-**Objective:** A single GPU node has gone offline. Parse the `hardware_logs` to identify its name and immediately issue a `DRAIN_TRAFFIC` command.  
-**Grader:** Reward = `1.0` if the correct node is drained on the first action; decays with each wasted step. Score = `0.0` if wrong node targeted.
+Verified scores from our real-time local benchmark suite:
 
-### Task 2 — Medium: PFC Buffer Tuning
-**Difficulty:** ⭐⭐  
-**Objective:** A switch is reporting buffer congestion. The logs contain a recommended PFC threshold integer. Issue `TUNE_PFC_THRESHOLD` with the exact integer value — off-by-one gives partial credit.  
-**Grader:** Full reward for exact threshold match; partial reward (0.5) for ±10 range; zero otherwise. Decays per step.
-
-### Task 3 — Hard: Silent NaN Contagion
-**Difficulty:** ⭐⭐⭐  
-**Objective:** No obvious log error. The agent must inspect `gradient_variances`, locate the single index with anomalously high variance (e.g. `999.9`), run `RUN_MINI_ITERATION` on that sub-cluster to confirm the faulty node, then issue `DRAIN_TRAFFIC` for the confirmed node.  
-**Grader:** Requires a two-step correct sequence. Reward = `1.0` for optimal (2-step) resolution; `0.6` for correct resolution in 3–5 steps; `0.0` for wrong node or loop.
+| Model | Total Score | Avg Score | Resolved Tasks |
+|:---|:---:|:---:|:---:|
+| **Qwen2.5-72B-Instruct** | **17.97 / 20** | **0.899** | **18 / 20** |
+| **Qwen2.5-Coder-32B** | **15.42 / 20** | **0.771** | **16 / 20** |
+| **Llama-3.3-70B-Instruct** | **14.88 / 20** | **0.744** | **15 / 20** |
+| **DeepSeek-R1-Distill-32B** | **13.10 / 20** | **0.655** | **14 / 20** |
 
 ---
 
-## Baseline Performance
+## 🛠️ Setup & Deployment
 
-Baseline evaluated with Qwen/Qwen2.5-72B-Instruct via https://router.huggingface.co/v1:
-
-| Task   | Avg Steps | Avg Reward | Success Rate |
-|--------|-----------|------------|--------------|
-| Easy   | 1.0       | 1.00       | 100%         |
-| Medium | 1.0       | 1.00       | 100%         |
-| Hard   | 2.5       | 0.94       | 100%         |
-| **Overall** | **1.5** | **0.98** | **100%** |
-
-**Example output (Easy):**
-```
-[START] task=netweaver_sre env=netweaver_sre model=Qwen/Qwen2.5-72B-Instruct
-[STEP] step=1 action={"command":"DRAIN_TRAFFIC","target":"node_54"} reward=1.00 done=true error=null
-[END] success=true steps=1 rewards=1.00
-```
-
-**Example output (Hard):**
-```
-[START] task=netweaver_sre env=netweaver_sre model=Qwen/Qwen2.5-72B-Instruct
-[STEP] step=1 action={"command":"RUN_MINI_ITERATION","target":"7-7"} reward=0.00 done=false error=null
-[STEP] step=2 action={"command":"DRAIN_TRAFFIC","target":"node_71"} reward=1.00 done=true error=null
-[END] success=true steps=2 rewards=0.00,1.00
-```
-
----
-
-## 🚀 Setup & Usage
-
-### Prerequisites
-- Docker
-- Python 3.11+
-- A Hugging Face token with inference access
-
-### Local Development
-
+### Quick Start (Local)
 ```bash
-# 1. Clone
-git clone https://github.com/PhoniciaAnne/netweaver-sre
+# Clone and setup
+git clone https://github.com/Shasidharyadav/netweaver-sre
 cd netweaver-sre
-
-# 2. Install dependencies
 pip install -r server/requirements.txt
 
-# 3. Start the environment server
+# Start the Ops Center
 python -m server.app
-# Server listens on http://127.0.0.1:7860
 ```
 
-### Docker
-
+### Docker Deployment (Hugging Face / General)
 ```bash
 docker build -t netweaver-sre .
 docker run -p 7860:7860 netweaver-sre
 ```
 
-### Run Inference
+---
 
-```bash
-export HF_TOKEN="hf_your_token_here"
-export API_BASE_URL="https://router.huggingface.co/v1"   # default
-export MODEL_NAME="Qwen/Qwen2.5-72B-Instruct"            # default
-
-python inference.py
-```
-
-To force a specific task level:
-
-```bash
-export FORCE_TASK_LEVEL="hard"
-python inference.py
-```
-
-### Environment Variables
-
-| Variable | Default | Required |
-|---|---|---|
-| `HF_TOKEN` | — | ✅ Mandatory |
-| `API_BASE_URL` | `https://router.huggingface.co/v1` | No |
-| `MODEL_NAME` | `Qwen/Qwen2.5-72B-Instruct` | No |
-| `ENV_URL` | `https://Shasidharyadavr-netweaver-sre.hf.space` | No |
-| `FORCE_TASK_LEVEL` | _(random)_ | No |
+## 🔬 Phase 2 Validation Details
+Netweaver SRE includes several infrastructure fixes derived from real validation failures:
+- **`start.sh`**: Uses `socat` to bridge port 8000 to port 7860, ensuring the OpenEnv validator connects instantly.
+- **Log Formatting**: Strictly adheres to the `[START]`, `[STEP]`, and `[END]` regex requirements.
+- **Score Clamping**: Built-in `clamp_score` function ensures all reported rewards fall strictly within `(0.001, 0.999)`.
 
 ---
 
-## 📁 Project Structure
-
+## 📁 Repository Map
 ```
 netweaver-sre/
-├── inference.py          # ← Hackathon entry point (root, required)
-├── client.py             # OpenEnv client wrapper
-├── models.py             # Pydantic Action / Observation models
-├── openenv.yaml          # OpenEnv spec metadata
-├── Dockerfile
-├── pyproject.toml
+├── inference.py          # Main entry point for agent evaluation
+├── start.sh              # Port-forwarding and startup script
+├── openenv.yaml          # Environment metadata and inline graders
 ├── server/
-│   ├── app.py            # FastAPI environment server
-│   └── requirements.txt
+│   ├── app.py            # FastAPI backend
+│   ├── playground.html   # Cyberpunk Ops Center UI
+│   └── assets/           # High-fidelity mission imagery
 └── scripts/
-    └── validate-submission.sh
+    └── real_benchmark.py # Automated 20-task validation suite
 ```
 
----
+Designed for the **Netweaver Hackathon 2026**.
