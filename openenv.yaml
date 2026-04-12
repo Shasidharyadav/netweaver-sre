@@ -6,33 +6,162 @@ app: server.app:app
 port: 7860
 
 tasks:
-  - id: netweaver_sre_easy
+  - id: netweaver_sre_t01
     difficulty: easy
     grader:
       type: deterministic
       endpoint: /grader
     description: >
-      Identify and drain traffic from an offline node in a 100k GPU cluster.
-      The agent must parse hardware logs to find the faulty node name and
-      issue a DRAIN_TRAFFIC command targeting that specific node.
+      Node Offline Triage. Identify offline node. Isolate with DRAIN_TRAFFIC.
 
-  - id: netweaver_sre_medium
+  - id: netweaver_sre_t02
+    difficulty: easy
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      Stale DNS Cache. DNS resolution failing. Issue CLEAR_DNS_CACHE.
+
+  - id: netweaver_sre_t03
+    difficulty: easy
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      OOM Crash. Service crashed due to OOM. Issue RESTART_SERVICE.
+
+  - id: netweaver_sre_t04
+    difficulty: easy
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      TLS Cert Expiry. Certificate expired. Issue RENEW_CERTIFICATE.
+
+  - id: netweaver_sre_t05
+    difficulty: easy
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      Disk Space Full. Node disk space 100%. Issue CLEAR_TEMP_FILES.
+
+  - id: netweaver_sre_t06
+    difficulty: easy
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      Unhealthy Pod. Kubernetes pod stuck. Issue RESTART_POD.
+
+  - id: netweaver_sre_t07
+    difficulty: easy
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      Zombie Process. Zombie process found. Issue KILL_ZOMBIE_PROCESS.
+
+  - id: netweaver_sre_t08
     difficulty: medium
     grader:
       type: deterministic
       endpoint: /grader
     description: >
-      Diagnose buffer congestion on a network spine and tune the PFC
-      threshold to mitigate the issue. The agent must identify the correct
-      threshold value from system logs and apply it via TUNE_PFC_THRESHOLD.
+      PFC Buffer Tuning. Buffer congestion on switch. Issue TUNE_PFC_THRESHOLD with correct threshold.
 
-  - id: netweaver_sre_hard
+  - id: netweaver_sre_t09
+    difficulty: medium
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      Power Throttling. Node power throttled. Issue ADJUST_POWER_CAP with power watts.
+
+  - id: netweaver_sre_t10
+    difficulty: medium
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      BGP Route Flap. BGP flapping. Issue MITIGATE_ROUTE_FLAP with AS number.
+
+  - id: netweaver_sre_t11
+    difficulty: medium
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      Packet Drop. Jumbo frames dropping. Issue INCREASE_MTU with 9000.
+
+  - id: netweaver_sre_t12
+    difficulty: medium
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      API Rate Limiting. DDoS detected. Issue SET_RATE_LIMIT with request count.
+
+  - id: netweaver_sre_t13
+    difficulty: medium
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      Conn Pool Exhaustion. DB connections maxed. Issue SCALE_CONN_POOL with size.
+
+  - id: netweaver_sre_t14
+    difficulty: medium
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      CPU Context Switch. High context switching. Issue PIN_CPU_THREADS with count.
+
+  - id: netweaver_sre_t15
     difficulty: hard
     grader:
       type: deterministic
       endpoint: /grader
     description: >
-      Locate and isolate a NaN-producing node causing gradient divergence
-      across the cluster. The agent must perform binary search triage using
-      RUN_MINI_ITERATION to pinpoint the faulty sub-cluster, then drain
-      the specific node once identified.
+      Silent NaN Contagion. Check gradient_variances array. RUN_MINI_ITERATION to isolate, then DRAIN_TRAFFIC.
+
+  - id: netweaver_sre_t16
+    difficulty: hard
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      Broadcast Storm. Check queue_depths array. Switch is maxed. ISOLATE_BROADCAST_STORM.
+
+  - id: netweaver_sre_t17
+    difficulty: hard
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      GPU Memory Leak. Check gpu_memory_usage array. Spike on cluster. RESTART_GPU_DAEMON.
+
+  - id: netweaver_sre_t18
+    difficulty: hard
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      Cluster Deadlock. All arrays frozen at 0.0. ISSUE_GLOBAL_ROLLBACK on cluster_0.
+
+  - id: netweaver_sre_t19
+    difficulty: hard
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      Network Partition. queue_depths split (0.01 / 99.9). REBOOT_LEAF_SWITCHES on pod.
+
+  - id: netweaver_sre_t20
+    difficulty: hard
+    grader:
+      type: deterministic
+      endpoint: /grader
+    description: >
+      Corrupt DB Block. Check health array. Continual drop. PURGE_CORRUPT_BLOCK on exact cluster index.

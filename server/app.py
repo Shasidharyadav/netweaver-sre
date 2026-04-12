@@ -56,9 +56,23 @@ app = create_app(
 
 # ----- Custom routes -----
 from fastapi import Request
-
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 import os
+
+# Mount static assets
+assets_path = os.path.join(os.path.dirname(__file__), "assets")
+if not os.path.exists(assets_path):
+    os.makedirs(assets_path)
+
+app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    fav_path = os.path.join(assets_path, "favicon.png")
+    if os.path.exists(fav_path):
+        return FileResponse(fav_path)
+    return {"error": "favicon not found"}
 
 @app.get("/")
 async def root():
@@ -69,9 +83,12 @@ async def root():
 async def configure_task_level(request: Request):
     """Pin the task difficulty for the next /reset call."""
     body = await request.json()
-    level = body.get("task_level", "").lower()
-    if level not in ("easy", "medium", "hard", ""):
-        return {"error": f"Invalid level '{level}'. Choose: easy, medium, hard"}
+    level = body.get("task_level", "").lower().strip()
+    
+    valid_ids = [f"t{i:02d}" for i in range(1, 21)]
+    if level not in ("easy", "medium", "hard", "") and level not in valid_ids:
+        return {"error": f"Invalid level '{level}'. Choose: easy, medium, hard, or t01-t20"}
+    
     set_task_level(level)
     return {"success": True, "task_level": level or "random"}
 

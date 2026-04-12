@@ -12,9 +12,10 @@ def test_all_levels():
     # --- EASY MODE ---
     print("\n" + "="*40)
     print(">>> [EASY] Testing DRAIN_TRAFFIC")
+    from server.netweaver_sre_environment import _GLOBAL_CACHE
     obs = env.reset(task_level="easy")
     print(f"Log: {obs.hardware_logs[-1]}")
-    faulty = env._faulty_node_id
+    faulty = _GLOBAL_CACHE["faulty_node_id"]
     print(f"Action: DRAIN_TRAFFIC on {faulty}")
     obs = env.step(NetweaverSreAction(command="DRAIN_TRAFFIC", target=faulty))
     print(f"Result Reward: {obs.reward} | Done: {obs.done}")
@@ -24,7 +25,7 @@ def test_all_levels():
     print(">>> [MEDIUM] Testing TUNE_PFC_THRESHOLD")
     obs = env.reset(task_level="medium")
     print(f"Log: {obs.hardware_logs[-1]}")
-    target_pfc = env._target_pfc
+    target_pfc = _GLOBAL_CACHE["target_val"]
     
     # 1st Action: Incorrect PFC
     wrong_pfc = target_pfc + 10
@@ -44,7 +45,7 @@ def test_all_levels():
     print(f"Log: {obs.hardware_logs[-1]}")
     
     # Peek at truth
-    faulty_idx = int(env._faulty_node_id.split("_")[1]) // 10
+    faulty_idx = int(_GLOBAL_CACHE["faulty_node_id"].split("_")[1]) // 10
     
     # 1st Action: Query wrong range
     bad_start, bad_end = (faulty_idx + 1) % 10, (faulty_idx + 2) % 10
@@ -58,8 +59,8 @@ def test_all_levels():
     print(f"Log: {obs.hardware_logs[-1]}")
     
     # 3rd Action: Drain the correct node directly
-    print(f"Action 3 (Isolate): DRAIN_TRAFFIC on {env._faulty_node_id}")
-    obs = env.step(NetweaverSreAction(command="DRAIN_TRAFFIC", target=env._faulty_node_id))
+    print(f"Action 3 (Isolate): DRAIN_TRAFFIC on {_GLOBAL_CACHE['faulty_node_id']}")
+    obs = env.step(NetweaverSreAction(command="DRAIN_TRAFFIC", target=_GLOBAL_CACHE['faulty_node_id']))
     print(f"Result Reward: {obs.reward} | Done: {obs.done}")
 
 if __name__ == "__main__":

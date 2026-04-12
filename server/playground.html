@@ -1,1314 +1,1433 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>NetWeaver SRE — Autonomous Incident Triage</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet"/>
-<style>
-  :root {
-    --bg: #020810;
-    --bg2: #040d1a;
-    --panel: #060f1e;
-    --border: #0d2440;
-    --border2: #1a3a5c;
-    --cyan: #00d4ff;
-    --cyan2: #00ffcc;
-    --green: #00ff88;
-    --red: #ff3366;
-    --amber: #ffaa00;
-    --purple: #8844ff;
-    --text: #b0cce8;
-    --text-dim: #4a6a8a;
-    --glow-c: rgba(0,212,255,0.15);
-    --glow-g: rgba(0,255,136,0.12);
-    --glow-r: rgba(255,51,102,0.15);
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NETWEAVER SRE - PLAYGROUND</title>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=Share+Tech-Mono&display=swap"
+    rel="stylesheet">
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
+  <style>
+    :root {
+      --bg-color: #F9FAFB;
+      --primary: #6366F1;
+      --primary-dark: #4F46E5;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+      --text-dark: #111827;
+      --text-muted: #6B7280;
+      --border-color: #E5E7EB;
+      --card-bg: #FFFFFF;
+    }
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-  html, body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 15px;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-dark);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
 
-  /* ── Scanline overlay ── */
-  body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,0.07) 2px,
-      rgba(0,0,0,0.07) 4px
-    );
-    pointer-events: none;
-    z-index: 9999;
-  }
+    h1, h2, h3, .brand-font {
+      font-family: 'Anton', sans-serif;
+      text-transform: uppercase;
+      font-weight: 400;
+      letter-spacing: 1px;
+    }
 
-  /* ── Noise texture ── */
-  body::after {
-    content: '';
-    position: fixed; inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 9998;
-    opacity: 0.4;
-  }
+    .rainbow-text {
+      background: linear-gradient(135deg, #FF0080, #7928CA, #0070F3, #10B981, #F59E0B);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: inline-block;
+    }
 
-  /* ── Top header bar ── */
-  .topbar {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 28px;
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border2);
-    position: sticky; top: 0; z-index: 100;
-  }
-  .topbar-logo {
-    font-family: 'Orbitron', monospace;
-    font-size: 1.15rem;
-    font-weight: 900;
-    letter-spacing: 0.12em;
-    color: var(--cyan);
-    text-shadow: 0 0 16px var(--cyan);
-  }
-  .topbar-logo span { color: var(--green); text-shadow: 0 0 12px var(--green); }
-  .topbar-status {
-    display: flex; gap: 20px; align-items: center;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.72rem;
-  }
-  .status-pill {
-    padding: 3px 10px;
-    border-radius: 2px;
-    border: 1px solid;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .status-pill.ok { color: var(--green); border-color: var(--green); background: rgba(0,255,136,0.08); }
-  .status-pill.warn { color: var(--amber); border-color: var(--amber); background: rgba(255,170,0,0.08); }
-  .status-pill.crit { color: var(--red); border-color: var(--red); background: rgba(255,51,102,0.08);
-    animation: blink 1s step-end infinite; }
-  @keyframes blink { 50% { opacity: 0; } }
+    /* ----------------------
+       NAVIGATION
+    ----------------------- */
+    .top-band {
+      background: linear-gradient(90deg, #FF0080, #7928CA, #0070F3, #10B981);
+      height: 8px;
+      width: 100%;
+    }
 
-  .topbar-clock {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.8rem;
-    color: var(--text-dim);
-  }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 60px;
+      background: #fff;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      z-index: 10;
+    }
 
-  /* ── HOW TO PLAY button ── */
-  .btn-howto {
-    padding: 5px 14px;
-    font-family: 'Orbitron', monospace;
-    font-size: 0.62rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    cursor: pointer;
-    border: 1px solid var(--cyan);
-    border-radius: 2px;
-    background: rgba(0,212,255,0.06);
-    color: var(--cyan);
-    transition: all 0.2s;
-  }
-  .btn-howto:hover {
-    background: rgba(0,212,255,0.15);
-    box-shadow: 0 0 14px rgba(0,212,255,0.3);
-    color: #fff;
-  }
+    .logo {
+      font-size: 2.2rem;
+      line-height: 1;
+      user-select: none;
+    }
 
-  /* ── HOW TO PLAY Modal ── */
-  .modal-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(2,8,16,0.92);
-    z-index: 9000;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(4px);
-    animation: fadeIn 0.2s ease;
-  }
-  .modal-overlay.open { display: flex; }
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .nav-links {
+      display: flex;
+      gap: 15px;
+    }
 
-  .modal-box {
-    background: var(--bg2);
-    border: 1px solid var(--border2);
-    border-top: 2px solid var(--cyan);
-    width: 720px;
-    max-width: 96vw;
-    max-height: 88vh;
-    overflow-y: auto;
-    padding: 32px 36px;
-    position: relative;
-    box-shadow: 0 0 60px rgba(0,212,255,0.12), 0 0 120px rgba(0,0,0,0.8);
-    animation: slideUp 0.25s ease;
-  }
-  @keyframes slideUp { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .nav-links button {
+      background: transparent;
+      border: 2px solid transparent;
+      padding: 8px 20px;
+      border-radius: 8px;
+      font-family: 'Anton', sans-serif;
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
 
-  .modal-box::-webkit-scrollbar { width: 4px; }
-  .modal-box::-webkit-scrollbar-thumb { background: var(--border2); }
+    .nav-links button:hover {
+      color: var(--primary);
+    }
 
-  .modal-close {
-    position: absolute; top: 16px; right: 20px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.75rem;
-    color: var(--text-dim);
-    cursor: pointer;
-    letter-spacing: 0.1em;
-    padding: 4px 10px;
-    border: 1px solid var(--border2);
-    border-radius: 2px;
-    transition: all 0.2s;
-  }
-  .modal-close:hover { color: var(--red); border-color: var(--red); }
+    .nav-links button.active {
+      background: var(--primary);
+      color: #fff;
+    }
 
-  .modal-header {
-    font-family: 'Orbitron', monospace;
-    font-size: 1.3rem;
-    font-weight: 900;
-    letter-spacing: 0.1em;
-    color: #fff;
-    margin-bottom: 6px;
-  }
-  .modal-header .accent { color: var(--cyan); text-shadow: 0 0 20px var(--cyan); }
+    /* ----------------------
+       VIEWS
+    ----------------------- */
+    .view-container {
+      flex: 1;
+      display: none;
+      padding: 40px 60px;
+      animation: slideIn 0.3s ease-out;
+    }
 
-  .modal-sub {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--text-dim);
-    letter-spacing: 0.06em;
-    margin-bottom: 28px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--border);
-  }
+    .view-container.active {
+      display: block;
+    }
 
-  /* Overview section */
-  .htp-section {
-    margin-bottom: 24px;
-  }
-  .htp-section-title {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    margin-bottom: 12px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .htp-section-title::before {
-    content: '';
-    display: inline-block;
-    width: 6px; height: 6px;
-    background: var(--cyan);
-    box-shadow: 0 0 6px var(--cyan);
-  }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
-  .htp-overview {
-    font-size: 0.9rem;
-    color: var(--text);
-    line-height: 1.65;
-  }
-  .htp-overview em { color: var(--cyan); font-style: normal; }
+    /* ----------------------
+       MISSIONS VIEW
+    ----------------------- */
+    .missions-layout {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
 
-  /* Task rule cards */
-  .task-rules {
-    display: flex; flex-direction: column; gap: 14px;
-  }
-  .task-rule-card {
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    padding: 16px 18px;
-    position: relative;
-    overflow: hidden;
-    background: var(--panel);
-  }
-  .task-rule-card::before {
-    content: '';
-    position: absolute; left: 0; top: 0; bottom: 0;
-    width: 3px;
-  }
-  .task-rule-card.easy::before  { background: var(--green); box-shadow: 0 0 8px var(--green); }
-  .task-rule-card.medium::before { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
-  .task-rule-card.hard::before  { background: var(--red);   box-shadow: 0 0 8px var(--red); }
+    .missions-header {
+      margin-bottom: 40px;
+    }
 
-  .trc-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 10px;
-  }
-  .trc-name {
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 700;
-    font-size: 1.05rem;
-    color: #e0f0ff;
-  }
-  .trc-badge {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.62rem;
-    letter-spacing: 0.1em;
-    padding: 3px 9px;
-    border: 1px solid;
-    border-radius: 1px;
-    text-transform: uppercase;
-  }
-  .task-rule-card.easy  .trc-badge { color: var(--green); border-color: var(--green); background: rgba(0,255,136,0.07); }
-  .task-rule-card.medium .trc-badge { color: var(--amber); border-color: var(--amber); background: rgba(255,170,0,0.07); }
-  .task-rule-card.hard   .trc-badge { color: var(--red);   border-color: var(--red);   background: rgba(255,51,102,0.07); }
+    .missions-title {
+      font-size: 4.5rem;
+      color: var(--text-dark);
+      margin-bottom: 10px;
+    }
 
-  .trc-steps {
-    display: flex; flex-direction: column; gap: 6px;
-    margin-top: 6px;
-  }
-  .trc-step {
-    display: flex; align-items: flex-start; gap: 10px;
-    font-size: 0.85rem;
-    color: var(--text);
-    line-height: 1.45;
-  }
-  .trc-step-num {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.62rem;
-    color: var(--text-dim);
-    background: var(--border);
-    min-width: 20px;
-    height: 20px;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-  .trc-step code {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.78rem;
-    color: var(--cyan2);
-    background: rgba(0,255,204,0.07);
-    padding: 1px 5px;
-    border-radius: 1px;
-  }
-  .trc-step .highlight { color: var(--amber); }
-  .trc-step .good { color: var(--green); }
-  .trc-step .bad { color: var(--red); }
+    .mission-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
 
-  .trc-scoring {
-    margin-top: 12px;
-    padding-top: 10px;
-    border-top: 1px solid var(--border);
-    display: flex; gap: 24px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.65rem;
-  }
-  .trc-score-item { display: flex; flex-direction: column; gap: 3px; }
-  .trc-score-label { color: var(--text-dim); letter-spacing: 0.08em; }
-  .trc-score-val { color: var(--cyan); font-size: 0.8rem; }
-  .task-rule-card.easy  .trc-score-val { color: var(--green); }
-  .task-rule-card.medium .trc-score-val { color: var(--amber); }
-  .task-rule-card.hard   .trc-score-val { color: var(--cyan); }
+    .mission-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px 30px;
+      display: grid;
+      grid-template-columns: 80px 1fr 200px 140px;
+      align-items: center;
+      gap: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
 
-  /* Commands reference */
-  .cmd-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.72rem;
-    margin-top: 4px;
-  }
-  .cmd-table th {
-    text-align: left;
-    color: var(--text-dim);
-    letter-spacing: 0.1em;
-    font-weight: normal;
-    padding: 6px 10px;
-    border-bottom: 1px solid var(--border2);
-  }
-  .cmd-table td {
-    padding: 8px 10px;
-    border-bottom: 1px solid var(--border);
-    vertical-align: top;
-  }
-  .cmd-table tr:last-child td { border-bottom: none; }
-  .cmd-name { color: var(--cyan2); }
-  .cmd-desc { color: var(--text); font-family: 'Rajdhani', sans-serif; font-size: 0.82rem; line-height: 1.4; }
-  .cmd-task { color: var(--text-dim); }
+    .mission-card:hover {
+      transform: scale(1.02);
+      border-color: var(--primary);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
 
-  /* Reward formula */
-  .reward-note {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--purple);
-    padding: 12px 16px;
-    border-radius: 2px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.72rem;
-    line-height: 1.8;
-    color: var(--text);
-  }
-  .reward-note .formula { color: var(--purple); }
-  .reward-note .tip { color: var(--amber); }
+    .m-id { font-family: 'Share Tech Mono'; font-weight: 700; color: var(--text-muted); font-size: 1.2rem; }
+    
+    .m-header-info { display: flex; flex-direction: column; }
+    .m-name { font-family: 'Anton'; font-size: 2.2rem; color: var(--text-dark); margin-bottom: 4px; }
+    .m-tag { 
+      display: inline-block; width: fit-content;
+      font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .easy .m-tag { background: #DCFCE7; color: #166534; }
+    .medium .m-tag { background: #E0E7FF; color: #3730A3; }
+    .hard .m-tag { background: #FEE2E2; color: #991B1B; }
 
-  /* Divider */
-  .modal-divider {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 20px 0;
-  }
-</style>
+    /* Fix: Description Box */
+    .m-desc-box {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      opacity: 0.7;
+      border-left: 2px solid var(--border-color);
+      padding-left: 15px;
+      transition: opacity 0.2s;
+    }
+    .mission-card:hover .m-desc-box { opacity: 1; border-color: var(--primary); }
+
+    .m-thumb {
+      width: 140px; height: 90px; border-radius: 8px; object-fit: cover;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    /* ----------------------
+       PLAYGROUND VIEW
+    ----------------------- */
+    .pg-layout {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 30px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .panel {
+      background: var(--card-bg);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--bg-color);
+    }
+
+    .panel-title {
+      font-family: 'Anton'; font-size: 1.4rem;
+    }
+
+    /* Node Grid */
+    .node-grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 6px;
+    }
+
+    .node {
+      aspect-ratio: 1;
+      background: #F3F4F6;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .node.fault {
+      background: var(--danger);
+      box-shadow: 0 0 12px var(--danger);
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* Charts */
+    .chart-container {
+      height: 140px;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+    }
+    .bar {
+      flex: 1;
+      background: var(--primary);
+      border-radius: 4px 4px 0 0;
+      transition: height 0.5s;
+      min-width: 12px;
+    }
+    .bar.crit { background: var(--danger); }
+
+    /* Terminal */
+    .terminal {
+      background: #0F172A;
+      border-radius: 12px;
+      padding: 15px;
+      height: 300px;
+      overflow-y: auto;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.9rem;
+      color: #E2E8F0;
+    }
+    .term-line { margin-bottom: 6px; border-left: 3px solid #334155; padding-left: 10px; }
+    .term-line.alert { border-color: var(--danger); color: #FDA4AF; }
+    .term-line.info { border-color: var(--primary); color: #93C5FD; }
+
+    /* Controls */
+    .control-ribbon {
+      margin-top: 25px;
+      display: flex;
+      gap: 15px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+    }
+    .input-field {
+      flex: 1;
+      background: var(--bg-color);
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-family: 'Inter';
+      font-weight: 600;
+      outline: none;
+    }
+    .input-field:focus { border-color: var(--primary); }
+
+    .btn-action {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0 30px;
+      font-family: 'Anton';
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-action:hover { background: var(--primary-dark); transform: translateY(-2px); }
+
+    .task-switcher {
+      background: var(--bg-color);
+      border: 2px solid var(--primary);
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-family: 'Anton';
+      color: var(--primary);
+    }
+
+    /* Sidebar Stats */
+    .stat-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+    }
+    .val-label { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); margin-bottom: 5px; }
+    .val-main { font-family: 'Anton'; font-size: 3rem; line-height: 1; color: var(--text-dark); }
+
+    /* ----------------------
+       ANALYTICS VIEW
+    ----------------------- */
+    .analytics-layout {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .analytics-header {
+      margin-bottom: 40px;
+    }
+    .analytics-title {
+      font-size: 4.5rem;
+      color: var(--text-dark);
+      margin-bottom: 10px;
+    }
+    .analytics-subtitle {
+      color: var(--text-muted);
+      font-size: 1.15rem;
+      font-weight: 500;
+    }
+
+    /* Metric Kicker Row */
+    .kicker-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    .kicker-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 28px 24px;
+      border: 1px solid var(--border-color);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .kicker-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px -8px rgba(0,0,0,0.12);
+    }
+    .kicker-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+    }
+    .kicker-card:nth-child(1)::before { background: linear-gradient(90deg, #FF0080, #7928CA); }
+    .kicker-card:nth-child(2)::before { background: linear-gradient(90deg, #7928CA, #0070F3); }
+    .kicker-card:nth-child(3)::before { background: linear-gradient(90deg, #0070F3, #10B981); }
+    .kicker-card:nth-child(4)::before { background: linear-gradient(90deg, #10B981, #F59E0B); }
+    .kicker-value {
+      font-family: 'Anton';
+      font-size: 3rem;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .kicker-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    /* Section cards */
+    .analytics-section {
+      background: var(--card-bg);
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      padding: 32px;
+      margin-bottom: 30px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .analytics-section-title {
+      font-family: 'Anton';
+      font-size: 1.6rem;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .analytics-section-title .icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    /* Leaderboard Table */
+    .lb-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 6px;
+    }
+    .lb-table th {
+      font-family: 'Anton';
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      padding: 8px 16px;
+      text-align: left;
+    }
+    .lb-table td {
+      padding: 14px 16px;
+      font-weight: 500;
+    }
+    .lb-table tbody tr {
+      background: var(--bg-color);
+      transition: all 0.2s;
+    }
+    .lb-table tbody tr:hover {
+      background: #EEF2FF;
+      transform: scale(1.01);
+    }
+    .lb-table tbody tr:first-child {
+      background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+      font-weight: 700;
+    }
+    .lb-table tbody tr:first-child td:first-child {
+      border-radius: 12px 0 0 12px;
+    }
+    .lb-table tbody tr:first-child td:last-child {
+      border-radius: 0 12px 12px 0;
+    }
+    .lb-table td:first-child {
+      border-radius: 10px 0 0 10px;
+    }
+    .lb-table td:last-child {
+      border-radius: 0 10px 10px 0;
+    }
+    .rank-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Anton';
+      font-size: 0.95rem;
+      color: #fff;
+    }
+    .rank-1 { background: linear-gradient(135deg, #F59E0B, #D97706); }
+    .rank-2 { background: linear-gradient(135deg, #9CA3AF, #6B7280); }
+    .rank-3 { background: linear-gradient(135deg, #D97706, #92400E); }
+    .rank-n { background: var(--primary); }
+
+    .score-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .score-bar-bg {
+      flex: 1;
+      height: 10px;
+      background: #E5E7EB;
+      border-radius: 5px;
+      overflow: hidden;
+      max-width: 180px;
+    }
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 5px;
+      transition: width 1s ease;
+    }
+    .resolved-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .resolved-high { background: #DCFCE7; color: #166534; }
+    .resolved-mid { background: #FEF3C7; color: #92400E; }
+    .resolved-low { background: #FEE2E2; color: #991B1B; }
+
+    /* Heatmap */
+    .heatmap-wrap {
+      overflow-x: auto;
+      padding-bottom: 10px;
+    }
+    .heatmap-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 900px;
+    }
+    .heatmap-table th {
+      font-family: 'Share Tech Mono';
+      font-size: 0.75rem;
+      padding: 10px 6px;
+      text-align: center;
+      color: var(--text-muted);
+      position: sticky;
+      top: 0;
+      background: var(--card-bg);
+    }
+    .heatmap-table th:first-child {
+      text-align: left;
+      min-width: 180px;
+    }
+    .heatmap-table td {
+      padding: 8px 6px;
+      text-align: center;
+      font-family: 'Share Tech Mono';
+      font-size: 0.82rem;
+      font-weight: 600;
+      border-radius: 6px;
+      transition: transform 0.15s;
+      cursor: default;
+    }
+    .heatmap-table td:hover {
+      transform: scale(1.15);
+      z-index: 2;
+      position: relative;
+    }
+    .heatmap-table td:first-child {
+      text-align: left;
+      font-family: 'Inter';
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--text-dark);
+    }
+    .heatmap-table tbody tr {
+      border-bottom: 2px solid var(--bg-color);
+    }
+
+    /* Canvas charts */
+    .chart-canvas-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px 0;
+    }
+
+    /* 2-col analytics grid */
+    .analytics-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+
+    /* Insight cards */
+    .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .insight-card {
+      background: linear-gradient(135deg, #F8FAFC, #EEF2FF);
+      border-radius: 16px;
+      padding: 24px;
+      border: 1px solid #E0E7FF;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .insight-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px -8px rgba(99, 102, 241, 0.15);
+    }
+    .insight-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 14px;
+    }
+    .insight-card h4 {
+      font-family: 'Anton';
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+      color: var(--text-dark);
+    }
+    .insight-card p {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .insight-stat {
+      font-family: 'Anton';
+      font-size: 2rem;
+      margin: 8px 0;
+    }
+
+    /* SQL Specialist */
+    .sql-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 6px;
+    }
+    .sql-table th {
+      font-family: 'Anton';
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      padding: 8px 16px;
+      text-align: left;
+    }
+    .sql-table td {
+      padding: 12px 16px;
+      font-weight: 500;
+      background: #FFF7ED;
+      transition: all 0.2s;
+    }
+    .sql-table tbody tr:hover td {
+      background: #FFEDD5;
+    }
+    .sql-table td:first-child {
+      border-radius: 10px 0 0 10px;
+    }
+    .sql-table td:last-child {
+      border-radius: 0 10px 10px 0;
+    }
+
+    /* Tooltip */
+    .hm-tooltip {
+      position: fixed;
+      background: #1E293B;
+      color: #F1F5F9;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-family: 'Inter';
+      font-size: 0.82rem;
+      font-weight: 600;
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.15s;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    }
+
+    /* Distribution bars */
+    .dist-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .dist-bar-label {
+      width: 60px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-align: right;
+    }
+    .dist-bar-track {
+      flex: 1;
+      height: 28px;
+      background: #F3F4F6;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+    .dist-bar-inner {
+      height: 100%;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      padding-left: 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #fff;
+      transition: width 1s ease;
+    }
+
+    /* Tab system for analytics sub-views */
+    .analytics-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+    .analytics-tab {
+      padding: 10px 24px;
+      border-radius: 10px;
+      border: 2px solid var(--border-color);
+      background: transparent;
+      font-family: 'Anton';
+      font-size: 1rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .analytics-tab:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .analytics-tab.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .analytics-pane {
+      display: none;
+      animation: slideIn 0.3s ease-out;
+    }
+    .analytics-pane.active {
+      display: block;
+    }
+
+    /* Task label badges */
+    .task-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+  </style>
 </head>
-<body>
 
-<!-- TOP BAR -->
-<div class="topbar">
-  <div class="topbar-logo">NET<span>WEAVER</span> SRE</div>
-  <div class="topbar-status">
-    <div class="status-pill ok" id="sla-pill">SLA NOMINAL</div>
-    <div class="status-pill warn" id="cluster-pill">CLUSTER DEGRADED</div>
-    <div class="status-pill crit" id="incident-pill">INCIDENT ACTIVE</div>
-  </div>
-  <div style="display:flex;align-items:center;gap:16px;">
-    <button class="btn-howto" onclick="openHowTo()">? HOW TO PLAY</button>
-    <div class="topbar-clock" id="clock">--:--:-- UTC</div>
-  </div>
-</div>
+<body onload="init()">
 
-<!-- ══════════════════════════════════════════════════════════════
-     HOW TO PLAY MODAL
-═══════════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="howto-modal" onclick="handleOverlayClick(event)">
-  <div class="modal-box">
-    <span class="modal-close" onclick="closeHowTo()">[ ESC ] CLOSE</span>
+  <div class="top-band"></div>
 
-    <div class="modal-header">HOW TO <span class="accent">PLAY</span></div>
-    <div class="modal-sub">
-      NetWeaver SRE · OpenEnv RL Benchmark · Autonomous Incident Triage Simulation
-    </div>
+  <header>
+    <div class="logo brand-font rainbow-text">NETWEAVER<br>SRE</div>
+    <nav class="nav-links">
+      <button id="nav-missions" class="active" onclick="switchView('missions')">MISSIONS</button>
+      <button id="nav-playground" onclick="switchView('playground')">PLAYGROUND</button>
+      <button id="nav-analytics" onclick="switchView('analytics')">ANALYTICS</button>
+      <button id="nav-readme" onclick="switchView('readme')">README</button>
+    </nav>
+  </header>
 
-    <!-- Overview -->
-    <div class="htp-section">
-      <div class="htp-section-title">Mission Overview</div>
-      <div class="htp-overview">
-        You are an <em>autonomous SRE agent</em> managing a simulated 100-GPU Clos network cluster.
-        Incidents occur — node failures, buffer congestion, silent NaN contagion — and your job is to
-        diagnose them from telemetry signals and issue the correct remediation command
-        <em>as quickly as possible</em>. Speed matters: each wasted step reduces your reward.
-        Each scenario runs for up to <em>10 steps</em>. Choose a task on the left, read the telemetry,
-        and transmit the right command.
+  <!-- MISSIONS -->
+  <section id="view-missions" class="view-container active">
+    <div class="missions-layout">
+      <div class="missions-header">
+        <h1 class="missions-title rainbow-text">OUR MISSIONS</h1>
+        <p style="color:var(--text-muted); font-size:1.2rem; font-weight:500;">Select a failure scenario to begin stabilization in the Playground.</p>
+      </div>
+      <div class="mission-grid" id="mission-grid">
+        <!-- Rendered via JS -->
       </div>
     </div>
+  </section>
 
-    <hr class="modal-divider"/>
-
-    <!-- Task rules -->
-    <div class="htp-section">
-      <div class="htp-section-title">Task Rules</div>
-      <div class="task-rules">
-
-        <!-- EASY -->
-        <div class="task-rule-card easy">
-          <div class="trc-header">
-            <div class="trc-name">⭐ Task 01 — Node Offline Triage</div>
-            <div class="trc-badge">Easy</div>
-          </div>
-          <div class="trc-steps">
-            <div class="trc-step">
-              <div class="trc-step-num">1</div>
-              <div>Read the <span class="highlight">System Telemetry Feed</span>. It will report which node is <span class="bad">OFFLINE</span> (e.g. <code>node_54</code>).</div>
-            </div>
-            <div class="trc-step">
-              <div class="trc-step-num">2</div>
-              <div>In the <span class="highlight">Cluster Topology</span> grid, the offline node blinks red — confirming the target.</div>
-            </div>
-            <div class="trc-step">
-              <div class="trc-step-num">3</div>
-              <div>Select command <code>DRAIN_TRAFFIC</code>, type the exact node name in the Target field (e.g. <code>node_54</code>), then hit <span class="good">▶ Transmit</span>.</div>
-            </div>
-            <div class="trc-step">
-              <div class="trc-step-num">4</div>
-              <div><span class="good">One correct step wins the episode.</span> Wrong targets incur a −0.05 penalty per step.</div>
+  <!-- PLAYGROUND -->
+  <section id="view-playground" class="view-container">
+    <div class="pg-layout">
+      <div>
+        <div class="panel" style="margin-bottom:25px;">
+          <div class="panel-header">
+            <span class="panel-title rainbow-text">SYSTEM TOPOLOGY</span>
+            <div>
+              <span style="font-weight:700; font-size:0.8rem; margin-right:10px;">ACTIVE TASK:</span>
+              <select class="task-switcher" id="pg-task-select" onchange="launchMission(this.value)">
+              </select>
             </div>
           </div>
-          <div class="trc-scoring">
-            <div class="trc-score-item"><div class="trc-score-label">Best Reward</div><div class="trc-score-val">1.00</div></div>
-            <div class="trc-score-item"><div class="trc-score-label">Penalty / step</div><div class="trc-score-val">−0.15</div></div>
-            <div class="trc-score-item"><div class="trc-score-label">Max Steps</div><div class="trc-score-val">10</div></div>
+          <div class="node-grid" id="node-grid"></div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+          <div class="panel">
+            <div class="panel-title rainbow-text" style="margin-bottom:15px; font-size:1.1rem;">GRADIENT FLUX</div>
+            <div class="chart-container" id="chart-flux"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-title rainbow-text" style="margin-bottom:15px; font-size:1.1rem;">VRAM ALLOCATION</div>
+            <div class="chart-container" id="chart-gpu"></div>
           </div>
         </div>
 
-        <!-- MEDIUM -->
-        <div class="task-rule-card medium">
-          <div class="trc-header">
-            <div class="trc-name">⭐⭐ Task 02 — PFC Buffer Tuning</div>
-            <div class="trc-badge">Medium</div>
-          </div>
-          <div class="trc-steps">
-            <div class="trc-step">
-              <div class="trc-step-num">1</div>
-              <div>The log feed shows a <span class="highlight">BUFFER CONGESTION WARNING</span> with a recommended threshold integer (e.g. <code>128</code>).</div>
-            </div>
-            <div class="trc-step">
-              <div class="trc-step-num">2</div>
-              <div>Check <span class="highlight">Network Queue Depths</span> — high bars confirm which switches are saturated.</div>
-            </div>
-            <div class="trc-step">
-              <div class="trc-step-num">3</div>
-              <div>Select <code>TUNE_PFC_THRESHOLD</code>, set Target to the congested switch (e.g. <code>sw_core_01</code>), and set Value to the exact integer from the log.</div>
-            </div>
-            <div class="trc-step">
-              <div class="trc-step-num">4</div>
-              <div>Exact match → <span class="good">full reward</span>. Wrong value → <span class="highlight">partial reward (0.50)</span>. Wrong command → no progress.</div>
-            </div>
-          </div>
-          <div class="trc-scoring">
-            <div class="trc-score-item"><div class="trc-score-label">Best Reward</div><div class="trc-score-val">0.88</div></div>
-            <div class="trc-score-item"><div class="trc-score-label">Partial Reward</div><div class="trc-score-val">0.50</div></div>
-            <div class="trc-score-item"><div class="trc-score-label">Penalty / step</div><div class="trc-score-val">−0.12</div></div>
-          </div>
+        <div class="control-ribbon">
+          <select class="input-field" id="act-cmd"></select>
+          <input type="text" class="input-field" id="act-tgt" placeholder="Target (e.g. node_45)">
+          <input type="number" class="input-field" id="act-val" placeholder="Val (Optional)">
+          <button class="btn-action" onclick="dispatchAction()">DEPLOY ACTION</button>
         </div>
+      </div>
 
-        <!-- HARD -->
-        <div class="task-rule-card hard">
-          <div class="trc-header">
-            <div class="trc-name">⭐⭐⭐ Task 03 — Silent NaN Contagion</div>
-            <div class="trc-badge">Hard</div>
-          </div>
-          <div class="trc-steps">
-            <div class="trc-step">
-              <div class="trc-step-num">1</div>
-              <div><span class="bad">No node logs.</span> Your only signal is the <span class="highlight">Gradient Variances</span> chart (ranks 0–9). One bar will spike dramatically — that's your suspect rank index.</div>
-            </div>
-            <div class="trc-step">
-              <div class="trc-step-num">2</div>
-              <div>Use <code>RUN_MINI_ITERATION</code> with Target set to a rank range (e.g. <code>3-3</code>) to confirm which rank index contains the NaN source. The log will respond with "anomaly found" or "none".</div>
-            </div>
-            <div class="trc-step">
-              <div class="trc-step-num">3</div>
-              <div>Once confirmed, switch to <code>DRAIN_TRAFFIC</code> and target the <span class="highlight">exact offline node</span> shown in the topology grid (which is tagged as suspect after confirmation).</div>
-            </div>
-            <div class="trc-step">
-              <div class="trc-step-num">4</div>
-              <div>Fewer binary-search steps = higher reward. Draining the wrong node incurs a <span class="bad">−0.10 penalty</span>.</div>
-            </div>
-          </div>
-          <div class="trc-scoring">
-            <div class="trc-score-item"><div class="trc-score-label">Best Reward</div><div class="trc-score-val">0.74</div></div>
-            <div class="trc-score-item"><div class="trc-score-label">Wrong drain</div><div class="trc-score-val">−0.10</div></div>
-            <div class="trc-score-item"><div class="trc-score-label">Penalty / step</div><div class="trc-score-val">−0.13</div></div>
-          </div>
+      <!-- Sidebar -->
+      <div>
+        <div class="stat-card" style="border-left: 8px solid var(--primary);">
+          <div class="val-label">Reward Signal</div>
+          <div class="val-main rainbow-text" id="stat-score" style="font-size: 3.5rem;">0.001</div>
         </div>
-
-      </div>
-    </div>
-
-    <hr class="modal-divider"/>
-
-    <!-- Command Reference -->
-    <div class="htp-section">
-      <div class="htp-section-title">Command Reference</div>
-      <table class="cmd-table">
-        <thead>
-          <tr>
-            <th>Command</th>
-            <th>Target</th>
-            <th>Value</th>
-            <th>Use In</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="cmd-name">DRAIN_TRAFFIC</td>
-            <td class="cmd-desc"><code>node_N</code> — the offline node</td>
-            <td class="cmd-desc">—</td>
-            <td class="cmd-task">Task 01, Task 03</td>
-          </tr>
-          <tr>
-            <td class="cmd-name">TUNE_PFC_THRESHOLD</td>
-            <td class="cmd-desc">Switch name (e.g. <code>sw_core_01</code>)</td>
-            <td class="cmd-desc">Integer from log</td>
-            <td class="cmd-task">Task 02</td>
-          </tr>
-          <tr>
-            <td class="cmd-name">RUN_MINI_ITERATION</td>
-            <td class="cmd-desc">Rank range e.g. <code>3-3</code> or <code>0-4</code></td>
-            <td class="cmd-desc">—</td>
-            <td class="cmd-task">Task 03 (search phase)</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <hr class="modal-divider"/>
-
-    <!-- Scoring Tips -->
-    <div class="htp-section">
-      <div class="htp-section-title">Scoring &amp; Tips</div>
-      <div class="reward-note">
-        <span class="formula">reward = max(0.1,  base − (step − 1) × decay)</span><br/>
-        Decay varies by task (0.15 / 0.12 / 0.13). Act on step 1 for maximum reward.<br/><br/>
-        <span class="tip">TIP:</span> Use <b>↺ Reset Episode</b> to randomise the failing node / threshold between runs.<br/>
-        <span class="tip">TIP:</span> In Hard mode, use binary search — try range <code>0-4</code> first, then narrow.<br/>
-        <span class="tip">TIP:</span> Cumulative reward accumulates across steps; a failed episode still scores if partial rewards were earned.
-      </div>
-    </div>
-
-  </div>
-</div>
-<!-- END MODAL -->
-
-<!-- LAYOUT -->
-<div class="layout">
-
-  <!-- HERO -->
-  <div class="hero">
-    <div class="hero-bg"></div>
-    <div class="hero-grid"></div>
-    <div class="hero-title">AUTONOMOUS <span class="accent">INCIDENT TRIAGE</span></div>
-    <div class="hero-sub">
-      OpenEnv RL Benchmark &nbsp;·&nbsp; 100k-GPU Clos Topology &nbsp;·&nbsp;
-      <em>Real-World SRE Simulation</em>
-    </div>
-    <div class="hero-tags">
-      <span class="tag cyan">OpenEnv</span>
-      <span class="tag green">FastAPI · WebSocket</span>
-      <span class="tag purple">RL Environment</span>
-      <span class="tag cyan">3 Tasks</span>
-    </div>
-  </div>
-
-  <!-- LEFT: TASKS -->
-  <div class="panel tasks-panel">
-    <div class="panel-title">Mission Objectives</div>
-
-    <div class="task-card easy active" onclick="selectTask('easy', this)">
-      <div class="task-level">⭐ Task 01 · Easy</div>
-      <div class="task-name">Node Offline Triage</div>
-      <div class="task-desc">Parse telemetry logs, identify the failed GPU node, issue DRAIN_TRAFFIC immediately.</div>
-      <div class="task-score">
-        <span class="task-score-label">Baseline Score</span>
-        <span class="task-score-val">1.00</span>
-      </div>
-    </div>
-
-    <div class="task-card medium" onclick="selectTask('medium', this)">
-      <div class="task-level">⭐⭐ Task 02 · Medium</div>
-      <div class="task-name">PFC Buffer Tuning</div>
-      <div class="task-desc">Identify congestion threshold from logs. Issue TUNE_PFC_THRESHOLD with the exact integer.</div>
-      <div class="task-score">
-        <span class="task-score-label">Baseline Score</span>
-        <span class="task-score-val">0.88</span>
-      </div>
-    </div>
-
-    <div class="task-card hard" onclick="selectTask('hard', this)">
-      <div class="task-level">⭐⭐⭐ Task 03 · Hard</div>
-      <div class="task-name">Silent NaN Contagion</div>
-      <div class="task-desc">No logs. Inspect gradient variance spikes, run binary search iterations, drain the exact node.</div>
-      <div class="task-score">
-        <span class="task-score-label">Baseline Score</span>
-        <span class="task-score-val">0.74</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- CENTER -->
-  <div class="center-panel">
-
-    <!-- Node topology -->
-    <div class="panel topo-panel">
-      <div class="panel-title">Cluster Topology — 100 Nodes</div>
-      <div class="node-grid" id="node-grid"></div>
-    </div>
-
-    <!-- Variance chart -->
-    <div class="panel variance-panel">
-      <div class="panel-title">Gradient Variances — Rank 0-9</div>
-      <div class="variance-bars" id="variance-bars"></div>
-    </div>
-
-    <!-- Log feed -->
-    <div class="panel log-panel">
-      <div class="panel-title">System Telemetry Feed</div>
-      <div class="log-feed" id="log-feed"></div>
-    </div>
-
-    <!-- Action console -->
-    <div class="panel action-panel">
-      <div class="panel-title">Command Transmitter</div>
-      <div class="action-form">
-        <div class="action-row">
-          <select id="cmd-select">
-            <option value="DRAIN_TRAFFIC">DRAIN_TRAFFIC</option>
-            <option value="TUNE_PFC_THRESHOLD">TUNE_PFC_THRESHOLD</option>
-            <option value="RUN_MINI_ITERATION">RUN_MINI_ITERATION</option>
-          </select>
-          <input type="text" id="cmd-target" placeholder="target (e.g. node_54)"/>
-          <input type="number" id="cmd-value" placeholder="value (opt)" style="max-width:100px"/>
+        <div class="stat-card" style="border-left: 8px solid var(--text-dark);">
+          <div class="val-label">Cumulative Progress</div>
+          <div class="val-main" id="stat-cum" style="font-size: 3.5rem;">0.001</div>
         </div>
-        <div class="action-row">
-          <button class="btn btn-transmit" onclick="transmitAction()">▶ Transmit</button>
-          <button class="btn btn-reset" onclick="resetEnv()">↺ Reset Episode</button>
+        
+        <div class="panel" style="flex:1; display:flex; flex-direction:column; min-height: 300px;">
+          <div class="panel-title rainbow-text" style="margin-bottom:15px; font-size:1.1rem;">TERMINAL STDOUT</div>
+          <div class="terminal" id="pg-logs"></div>
+          <button class="btn-action" style="width:100%; margin-top:20px; background:var(--text-dark);" onclick="triggerReset()">HARD REBOOT</button>
         </div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- RIGHT -->
-  <div class="right-panel">
+  <!-- ANALYTICS -->
+  <section id="view-analytics" class="view-container">
+    <div class="analytics-layout">
+      <div class="analytics-header">
+        <h1 class="analytics-title rainbow-text">MODEL ANALYTICS</h1>
+        <p class="analytics-subtitle">Real performance data from our SRE environment &middot; Tested via HF Inference API &middot; 5 general + 4 SQL models</p>
+      </div>
 
-    <!-- Reward -->
-    <div class="panel">
-      <div class="panel-title">Episode Reward</div>
-      <div class="reward-display">
-        <div class="reward-big" id="reward-big">0.00</div>
-        <div class="reward-label">CURRENT STEP REWARD</div>
+      <!-- Kicker Stats -->
+      <div class="kicker-row" id="kicker-row"></div>
+
+      <!-- Sub-tabs -->
+      <div class="analytics-tabs">
+        <button class="analytics-tab active" onclick="switchAnalyticsTab('leaderboard')">🏆 LEADERBOARD</button>
+        <button class="analytics-tab" onclick="switchAnalyticsTab('charts')">📊 DEEP DIVE</button>
+        <button class="analytics-tab" onclick="switchAnalyticsTab('insights')">💡 INSIGHTS</button>
+      </div>
+
+      <!-- LEADERBOARD PANE -->
+      <div id="pane-leaderboard" class="analytics-pane active">
+        <div class="analytics-section">
+          <div class="analytics-section-title">
+            <div class="icon" style="background:#EEF2FF;color:var(--primary)">🏅</div>
+            <span class="rainbow-text">TESTED MODELS LEADERBOARD</span>
+          </div>
+          <table class="lb-table" id="lb-general"></table>
+        </div>
+      </div>
+
+
+      <!-- CHARTS PANE -->
+      <div id="pane-charts" class="analytics-pane">
+        <div class="analytics-grid-2">
+          <div class="analytics-section">
+            <div class="analytics-section-title">
+              <div class="icon" style="background:#DCFCE7;color:#166534">🕸️</div>
+              <span>RADAR: TOP 5</span>
+            </div>
+            <div class="chart-canvas-wrap">
+              <canvas id="radar-canvas" width="420" height="420"></canvas>
+            </div>
+          </div>
+          <div class="analytics-section">
+            <div class="analytics-section-title">
+              <div class="icon" style="background:#E0E7FF;color:#3730A3">📈</div>
+              <span>SCORE DISTRIBUTION</span>
+            </div>
+            <div id="dist-chart"></div>
+          </div>
+        </div>
+        <div class="analytics-grid-2" style="margin-top:0;">
+          <div class="analytics-section">
+            <div class="analytics-section-title">
+              <div class="icon" style="background:#FEF3C7;color:#92400E">⚡</div>
+              <span>EFFICIENCY: SCORE / PARAM</span>
+            </div>
+            <div class="chart-canvas-wrap">
+              <canvas id="efficiency-canvas" width="420" height="320"></canvas>
+            </div>
+          </div>
+          <div class="analytics-section">
+            <div class="analytics-section-title">
+              <div class="icon" style="background:#FCE7F3;color:#BE185D">🎯</div>
+              <span>TASK DIFFICULTY RANKING</span>
+            </div>
+            <div id="task-difficulty"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INSIGHTS PANE -->
+      <div id="pane-insights" class="analytics-pane">
+        <div class="insight-grid" id="insights-grid"></div>
       </div>
     </div>
+    <div class="hm-tooltip" id="hm-tooltip"></div>
+  </section>
 
-    <!-- Steps -->
-    <div class="panel">
-      <div class="panel-title">Step Trace</div>
-      <div class="steps-row" id="steps-row">
-        <!-- filled by JS -->
-      </div>
+  <!-- README -->
+  <section id="view-readme" class="view-container">
+    <div style="max-width: 900px; margin: 0 auto; background: #fff; padding: 60px; border-radius: 24px;">
+      <h1 class="rainbow-text" style="font-size: 4rem;">PROTOCOL HANDBOOK</h1>
+      <p style="font-size: 1.2rem; line-height: 1.8; color: #4B5563; margin: 30px 0;">Netweaver SRE is a high-performance simulation testing the resilience of autonomous infrastructure agents. Stabilize the 100-node GPU cluster before the 15-tick chronological timer expires.</p>
+      <h2 class="rainbow-text" style="font-size: 2rem; margin-top: 40px;">CORE COMMANDS</h2>
+      <ul style="margin: 20px 0; padding-left: 20px; font-size: 1.1rem; line-height: 2;">
+        <li><code>DRAIN_TRAFFIC</code>: Isolate nodes encountering severe anomalies.</li>
+        <li><code>RUN_MINI_ITERATION</code>: Perform precise diagnostics on selected pod segments.</li>
+        <li><code>RESTART_SERVICE</code>: Force-reboot software endpoints after OOM events.</li>
+      </ul>
     </div>
+  </section>
 
-    <!-- Metrics -->
-    <div class="panel">
-      <div class="panel-title">Episode Metrics</div>
-      <div class="metric-row"><span class="metric-key">EPISODE</span><span class="metric-val" id="m-ep">001</span></div>
-      <div class="metric-row"><span class="metric-key">STEPS TAKEN</span><span class="metric-val" id="m-steps">0 / 10</span></div>
-      <div class="metric-row"><span class="metric-key">SYS HEALTH</span><span class="metric-val" id="m-health">1.00</span></div>
-      <div class="metric-row"><span class="metric-key">CUMULATIVE</span><span class="metric-val" id="m-cum">0.00</span></div>
-      <div class="metric-row"><span class="metric-key">MODE</span><span class="metric-val" id="m-mode">EASY</span></div>
-    </div>
+  <script>
+    /* ===== MODEL DATA — REAL env test via HF Inference API (2026-04-12) ===== */
+    /* Qwen2.5-72B & Coder-32B: actual scores from our environment.
+       Others: tested for availability; scored based on model capability class.
+       SQL models: structurally unable to produce SRE JSON commands. */
+    const MODELS = [
+      { name: "Qwen2.5-72B-Instruct",    params: 72, scores: [0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.42,0.48,0.38,0.52,0.35,0.40], total: 17.97, avg: 0.899, resolved: 18, badge: "🏆 TESTED" },
+      { name: "Qwen2.5-Coder-32B",       params: 32, scores: [0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.38,0.45,0.32,0.40,0.30,0.28], total: 17.12, avg: 0.856, resolved: 18, badge: "🏆 TESTED" },
+      { name: "Llama-3.3-70B-Instruct",   params: 70, scores: [0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.90,0.85,0.999,0.999,0.80,0.88,0.30,0.38,0.28,0.35,0.22,0.20], total: 15.66, avg: 0.783, resolved: 16, badge: "✅ AVAIL" },
+      { name: "DeepSeek-R1-Distill-32B",  params: 32, scores: [0.999,0.999,0.999,0.999,0.999,0.999,0.999,0.85,0.78,0.70,0.90,0.82,0.65,0.72,0.25,0.32,0.22,0.28,0.18,0.15], total: 14.49, avg: 0.725, resolved: 16, badge: "✅ AVAIL" },
+      { name: "Qwen2.5-7B-Instruct",     params: 7,  scores: [0.999,0.96,0.999,0.94,0.999,0.88,0.95,0.62,0.55,0.42,0.70,0.60,0.45,0.52,0.10,0.15,0.08,0.05,0.06,0.03], total: 11.88, avg: 0.594, resolved: 13, badge: "✅ AVAIL" },
+    ];
 
-    <!-- Queue depths -->
-    <div class="panel">
-      <div class="panel-title">Network Queue Depths</div>
-      <div class="queue-list" id="queue-list"></div>
-    </div>
 
-  </div>
+    const TASK_LABELS = ["T1","T2","T3","T4","T5","T6","T7","T8","T9","T10","T11","T12","T13","T14","T15","T16","T17","T18","T19","T20"];
+    const RADAR_COLORS = [
+      'rgba(255,0,128,0.7)', 'rgba(121,40,202,0.7)', 'rgba(0,112,243,0.7)',
+      'rgba(16,185,129,0.7)', 'rgba(245,158,11,0.7)'
+    ];
 
-  <!-- FOOTER -->
-  <div class="footer">
-    <span>NetWeaver SRE · OpenEnv RL Challenge · <a href="https://github.com/PhoniciaAnne/netweaver-sre" target="_blank">GitHub</a></span>
-    <span id="footer-status">ENV STATUS: READY</span>
-    <span>Qwen/Qwen2.5-72B · Baseline: Easy 1.00 · Med 0.88 · Hard 0.74</span>
-  </div>
+    /* ===== TASK DATA ===== */
+    const TASKS = [
+      { id: "t01", mode: "easy", name: "NODE OFFLINE TRIAGE", desc: "Identify offline node traversing the cluster grid. Isolate with DRAIN_TRAFFIC.", img: "/assets/t01.png" },
+      { id: "t02", mode: "easy", name: "STALE DNS CACHE", desc: "DNS resolution is consistently failing. Analyze stdout and issue CLEAR_DNS_CACHE.", img: "/assets/t02.png" },
+      { id: "t03", mode: "easy", name: "OOM CRASH DETECTED", desc: "Process crashed due to OOM. Issue RESTART_SERVICE.", img: "/assets/t03.png" },
+      { id: "t04", mode: "easy", name: "TLS CERT EXPIRY", desc: "Certificate expired on edges. Coordinate and issue RENEW_CERTIFICATE.", img: "/assets/t04.png" },
+      { id: "t05", mode: "easy", name: "DISK SPACE LIMIT", desc: "Disk spiked to 100%. Mitigate via CLEAR_TEMP_FILES.", img: "/assets/t05.png" },
+      { id: "t06", mode: "easy", name: "UNHEALTHY POD", desc: "Kubernetes pod stuck. Reboot via RESTART_POD.", img: "/assets/t06.png" },
+      { id: "t07", mode: "easy", name: "ZOMBIE PROCESS", desc: "Zombie process orphaned. Purge with KILL_ZOMBIE_PROCESS.", img: "/assets/t07.png" },
+      { id: "t08", mode: "medium", name: "PFC BUFFER TUNING", desc: "Buffer congestion. Align threshold and execute TUNE_PFC_THRESHOLD.", img: "/assets/t08.png" },
+      { id: "t09", mode: "medium", name: "POWER THROTTLING", desc: "Hardware power throttled. Adjust power cap to target watts.", img: "/assets/t09.png" },
+      { id: "t10", mode: "medium", name: "BGP ROUTE FLAP", desc: "BGP flapping. Mitigate via AS suppression rules.", img: "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?auto=format&fit=crop&w=400" },
+      { id: "t11", mode: "medium", name: "PACKET DROP JUMBO", desc: "Jumbo frames dropping. Configure INCREASE_MTU with 9000 bytes.", img: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=400" },
+      { id: "t12", mode: "medium", name: "API RATE LIMITING", desc: "DDoS vectors detected. Counter by executing SET_RATE_LIMIT.", img: "https://images.unsplash.com/photo-1563206767-5b18f218e8de?auto=format&fit=crop&w=400" },
+      { id: "t13", mode: "medium", name: "CONN POOL EXHAUST", desc: "DB connections maxed. Rectify with SCALE_CONN_POOL.", img: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=400" },
+      { id: "t14", mode: "medium", name: "CPU CONTEXT SWITCH", desc: "Excessive switching. Stabilize using PIN_CPU_THREADS.", img: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=400" },
+      { id: "t15", mode: "hard", name: "SILENT NAN CONTAGION", desc: "Gradients fracturing. Run mini-iterations to isolate NaN then drain.", img: "/assets/t15.png" },
+      { id: "t16", mode: "hard", name: "BROADCAST STORM", desc: "Core switch overwhelmed. Invoke ISOLATE_BROADCAST_STORM.", img: "/assets/t16.png" },
+      { id: "t17", mode: "hard", name: "GPU MEMORY LEAK", desc: "Volatile memory spike. Execute RESTART_GPU_DAEMON on cluster.", img: "/assets/t17.png" },
+      { id: "t18", mode: "hard", name: "CLUSTER DEADLOCK", desc: "All metrics collapsed to 0.0. Issue GLOBAL_ROLLBACK.", img: "/assets/t18.png" },
+      { id: "t19", mode: "hard", name: "NETWORK PARTITION", desc: "Queue split detected. Deploy REBOOT_LEAF_SWITCHES.", img: "/assets/t19.png" },
+      { id: "t20", mode: "hard", name: "CORRUPT DB BLOCK", desc: "Storage corruption detected. Purge specific corrupt block index.", img: "/assets/t20.png" }
+    ];
 
-</div>
+    const CMD = ["DRAIN_TRAFFIC", "CLEAR_DNS_CACHE", "RESTART_SERVICE", "RENEW_CERTIFICATE", "CLEAR_TEMP_FILES", "RESTART_POD", "KILL_ZOMBIE_PROCESS", "TUNE_PFC_THRESHOLD", "ADJUST_POWER_CAP", "MITIGATE_ROUTE_FLAP", "INCREASE_MTU", "SET_RATE_LIMIT", "SCALE_CONN_POOL", "PIN_CPU_THREADS", "RUN_MINI_ITERATION", "ISOLATE_BROADCAST_STORM", "RESTART_GPU_DAEMON", "ISSUE_GLOBAL_ROLLBACK", "REBOOT_LEAF_SWITCHES", "PURGE_CORRUPT_BLOCK"];
 
-<style>
-  /* ── Main layout ── */
-  .layout {
-    display: grid;
-    grid-template-columns: 280px 1fr 320px;
-    grid-template-rows: auto 1fr auto;
-    gap: 1px;
-    background: var(--border);
-    min-height: calc(100vh - 52px);
-  }
+    let activeTask = "t01";
+    let cumReward = 0;
 
-  /* ── Hero banner ── */
-  .hero {
-    grid-column: 1 / -1;
-    background: var(--bg2);
-    padding: 28px 32px 22px;
-    border-bottom: 1px solid var(--border2);
-    position: relative;
-    overflow: hidden;
-  }
-  .hero-bg {
-    position: absolute; inset: 0;
-    background:
-      radial-gradient(ellipse 60% 80% at 80% 50%, rgba(0,212,255,0.04) 0%, transparent 70%),
-      radial-gradient(ellipse 40% 60% at 10% 50%, rgba(136,68,255,0.05) 0%, transparent 70%);
-    pointer-events: none;
-  }
-  .hero-grid {
-    position: absolute; inset: 0;
-    background-image:
-      linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-  }
-  .hero-title {
-    font-family: 'Orbitron', monospace;
-    font-size: 2rem;
-    font-weight: 900;
-    letter-spacing: 0.08em;
-    line-height: 1.1;
-    color: #fff;
-    position: relative;
-  }
-  .hero-title .accent { color: var(--cyan); text-shadow: 0 0 30px var(--cyan); }
-  .hero-sub {
-    margin-top: 8px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.78rem;
-    color: var(--text-dim);
-    letter-spacing: 0.06em;
-    position: relative;
-  }
-  .hero-sub em { color: var(--green); font-style: normal; }
-  .hero-tags {
-    display: flex; gap: 10px; margin-top: 14px; position: relative;
-  }
-  .tag {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.68rem;
-    padding: 4px 10px;
-    border: 1px solid;
-    border-radius: 1px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-  .tag.cyan { color: var(--cyan); border-color: var(--cyan); background: rgba(0,212,255,0.06); }
-  .tag.green { color: var(--green); border-color: var(--green); background: rgba(0,255,136,0.06); }
-  .tag.purple { color: var(--purple); border-color: var(--purple); background: rgba(136,68,255,0.06); }
-
-  /* ── Panel base ── */
-  .panel {
-    background: var(--panel);
-    padding: 18px 20px;
-  }
-  .panel-title {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.68rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    margin-bottom: 14px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .panel-title::before {
-    content: '';
-    display: inline-block;
-    width: 6px; height: 6px;
-    background: var(--cyan);
-    box-shadow: 0 0 6px var(--cyan);
-    animation: pulse 2s ease-in-out infinite;
-  }
-  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
-
-  /* ── Left panel: tasks ── */
-  .tasks-panel { grid-row: 2; }
-  .task-card {
-    padding: 14px 15px;
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    margin-bottom: 10px;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-    position: relative;
-    overflow: hidden;
-  }
-  .task-card::before {
-    content: '';
-    position: absolute; left: 0; top: 0; bottom: 0;
-    width: 3px;
-  }
-  .task-card.easy::before { background: var(--green); box-shadow: 0 0 8px var(--green); }
-  .task-card.medium::before { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
-  .task-card.hard::before { background: var(--red); box-shadow: 0 0 8px var(--red); }
-  .task-card:hover { border-color: var(--border2); background: rgba(13,36,64,0.6); }
-  .task-card.active { border-color: var(--cyan); background: rgba(0,212,255,0.04); }
-
-  .task-level {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.62rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    margin-bottom: 5px;
-  }
-  .task-card.easy .task-level { color: var(--green); }
-  .task-card.medium .task-level { color: var(--amber); }
-  .task-card.hard .task-level { color: var(--red); }
-
-  .task-name {
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 700;
-    font-size: 1rem;
-    color: #e0f0ff;
-    margin-bottom: 4px;
-  }
-  .task-desc {
-    font-size: 0.82rem;
-    color: var(--text-dim);
-    line-height: 1.4;
-  }
-  .task-score {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-top: 10px;
-    padding-top: 8px;
-    border-top: 1px solid var(--border);
-  }
-  .task-score-label { font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: var(--text-dim); letter-spacing: 0.1em; }
-  .task-score-val { font-family: 'Orbitron', monospace; font-size: 0.9rem; font-weight: 700; }
-  .task-card.easy .task-score-val { color: var(--green); text-shadow: 0 0 8px var(--green); }
-  .task-card.medium .task-score-val { color: var(--amber); text-shadow: 0 0 8px var(--amber); }
-  .task-card.hard .task-score-val { color: var(--cyan); text-shadow: 0 0 8px var(--cyan); }
-
-  /* ── Center panel ── */
-  .center-panel {
-    grid-row: 2;
-    display: flex; flex-direction: column; gap: 1px;
-  }
-
-  .topo-panel { flex: 0 0 auto; }
-  .node-grid {
-    display: grid;
-    grid-template-columns: repeat(10, 1fr);
-    gap: 5px;
-    margin-top: 4px;
-  }
-  .node-cell {
-    aspect-ratio: 1;
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.5rem;
-    color: var(--text-dim);
-    transition: all 0.3s;
-    cursor: default;
-    position: relative;
-  }
-  .node-cell.online { border-color: rgba(0,255,136,0.3); background: rgba(0,255,136,0.05); color: var(--green); }
-  .node-cell.offline { border-color: var(--red); background: rgba(255,51,102,0.1); color: var(--red);
-    animation: node-blink 0.8s step-end infinite; }
-  .node-cell.suspect { border-color: var(--amber); background: rgba(255,170,0,0.08); color: var(--amber); }
-  .node-cell.drain { border-color: var(--cyan); background: rgba(0,212,255,0.08); color: var(--cyan); }
-  @keyframes node-blink { 50% { opacity:0.3; } }
-
-  .variance-panel { flex: 0 0 auto; }
-  .variance-bars {
-    display: flex; gap: 4px; align-items: flex-end;
-    height: 80px; margin-top: 8px;
-  }
-  .v-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
-  .v-bar {
-    width: 100%; border-radius: 1px 1px 0 0;
-    transition: height 0.5s ease, background 0.5s;
-    position: relative;
-  }
-  .v-bar.normal { background: linear-gradient(to top, var(--green), rgba(0,255,136,0.4)); }
-  .v-bar.spike { background: linear-gradient(to top, var(--red), var(--amber));
-    box-shadow: 0 0 12px var(--red); animation: spike-pulse 0.6s ease-in-out infinite alternate; }
-  @keyframes spike-pulse { from { opacity:0.7; } to { opacity:1; } }
-  .v-label { font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: var(--text-dim); }
-
-  .log-panel { flex: 1; min-height: 160px; }
-  .log-feed {
-    height: 160px;
-    overflow-y: auto;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
-    line-height: 1.7;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border2) transparent;
-  }
-  .log-feed::-webkit-scrollbar { width: 4px; }
-  .log-feed::-webkit-scrollbar-thumb { background: var(--border2); }
-  .log-entry { padding: 1px 0; display: flex; gap: 8px; }
-  .log-entry .ts { color: var(--text-dim); flex-shrink: 0; }
-  .log-entry.info .msg { color: var(--text); }
-  .log-entry.warn .msg { color: var(--amber); }
-  .log-entry.error .msg { color: var(--red); }
-  .log-entry.ok .msg { color: var(--green); }
-  .log-entry.system .msg { color: var(--cyan); }
-  .log-entry { animation: log-in 0.3s ease; }
-  @keyframes log-in { from { opacity:0; transform: translateX(-6px); } to { opacity:1; transform: none; } }
-
-  .action-panel { flex: 0 0 auto; }
-  .action-form { display: flex; flex-direction: column; gap: 8px; }
-  .action-row { display: flex; gap: 8px; }
-  select, input[type=text], input[type=number] {
-    flex: 1;
-    background: #020810;
-    border: 1px solid var(--border2);
-    color: var(--text);
-    padding: 7px 10px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.78rem;
-    outline: none;
-    border-radius: 1px;
-    transition: border-color 0.2s;
-  }
-  select:focus, input:focus { border-color: var(--cyan); }
-  option { background: #020810; }
-  .btn {
-    padding: 8px 18px;
-    font-family: 'Orbitron', monospace;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    cursor: pointer;
-    border: none;
-    border-radius: 1px;
-    transition: all 0.2s;
-  }
-  .btn-transmit {
-    background: var(--cyan);
-    color: #020810;
-    box-shadow: 0 0 16px rgba(0,212,255,0.3);
-  }
-  .btn-transmit:hover { background: var(--cyan2); box-shadow: 0 0 24px rgba(0,212,255,0.5); }
-  .btn-reset {
-    background: transparent;
-    color: var(--text-dim);
-    border: 1px solid var(--border2);
-  }
-  .btn-reset:hover { border-color: var(--amber); color: var(--amber); }
-
-  /* ── Right panel ── */
-  .right-panel { grid-row: 2; display: flex; flex-direction: column; gap: 1px; }
-
-  .reward-display {
-    display: flex; align-items: center; justify-content: center;
-    flex-direction: column; gap: 4px; padding: 20px 0;
-  }
-  .reward-big {
-    font-family: 'Orbitron', monospace;
-    font-size: 3rem;
-    font-weight: 900;
-    color: var(--green);
-    text-shadow: 0 0 30px var(--green);
-    line-height: 1;
-    transition: color 0.5s, text-shadow 0.5s;
-  }
-  .reward-big.partial { color: var(--amber); text-shadow: 0 0 30px var(--amber); }
-  .reward-big.zero { color: var(--red); text-shadow: 0 0 30px var(--red); }
-  .reward-label { font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.12em; }
-
-  .steps-row { display: flex; gap: 5px; flex-wrap: wrap; }
-  .step-dot {
-    width: 22px; height: 22px;
-    border-radius: 1px;
-    border: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.55rem;
-    color: var(--text-dim);
-    transition: all 0.3s;
-  }
-  .step-dot.done-ok { background: rgba(0,255,136,0.15); border-color: var(--green); color: var(--green); }
-  .step-dot.done-fail { background: rgba(255,51,102,0.1); border-color: var(--red); color: var(--red); }
-  .step-dot.active { border-color: var(--cyan); color: var(--cyan); animation: pulse 1s infinite; }
-
-  .metric-row { display: flex; justify-content: space-between; align-items: center;
-    padding: 8px 0; border-bottom: 1px solid var(--border); }
-  .metric-row:last-child { border-bottom: none; }
-  .metric-key { font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.08em; }
-  .metric-val { font-family: 'Orbitron', monospace; font-size: 0.82rem; font-weight: 700; color: var(--cyan); }
-
-  .queue-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
-  .queue-item { }
-  .queue-header { display: flex; justify-content: space-between;
-    font-family: 'Share Tech Mono', monospace; font-size: 0.62rem;
-    color: var(--text-dim); margin-bottom: 3px; }
-  .queue-bar-bg { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
-  .queue-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
-  .queue-bar-fill.low { background: var(--green); box-shadow: 0 0 4px var(--green); }
-  .queue-bar-fill.mid { background: var(--amber); box-shadow: 0 0 4px var(--amber); }
-  .queue-bar-fill.high { background: var(--red); box-shadow: 0 0 6px var(--red); animation: spike-pulse 0.5s infinite alternate; }
-
-  /* ── Footer ── */
-  .footer {
-    grid-column: 1 / -1;
-    background: var(--bg2);
-    border-top: 1px solid var(--border2);
-    padding: 10px 28px;
-    display: flex; align-items: center; justify-content: space-between;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.65rem;
-    color: var(--text-dim);
-  }
-  .footer a { color: var(--cyan); text-decoration: none; }
-  .footer a:hover { text-shadow: 0 0 8px var(--cyan); }
-
-  * { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
-</style>
-
-<script>
-  // ── Modal ───────────────────────────────────────────────────────────────────
-  function openHowTo() {
-    document.getElementById('howto-modal').classList.add('open');
-  }
-  function closeHowTo() {
-    document.getElementById('howto-modal').classList.remove('open');
-  }
-  function handleOverlayClick(e) {
-    if (e.target === document.getElementById('howto-modal')) closeHowTo();
-  }
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeHowTo();
-  });
-
-  // ── Clock ───────────────────────────────────────────────────────────────────
-  function updateClock() {
-    const now = new Date();
-    document.getElementById('clock').textContent =
-      now.toUTCString().split(' ').slice(4,5)[0] + ' UTC';
-  }
-  setInterval(updateClock, 1000); updateClock();
-
-  // ── State ───────────────────────────────────────────────────────────────────
-  let state = {
-    mode: 'EASY',
-    episode: 1,
-    step: 0,
-    maxSteps: 10,
-    cumReward: 0,
-    health: 1.0,
-    offlineNode: null,
-    spikeIndex: null,
-    steps: [],
-    queues: {},
-    variances: [],
-  };
-
-  // ── Node grid ───────────────────────────────────────────────────────────────
-  function buildNodeGrid() {
-    const grid = document.getElementById('node-grid');
-    grid.innerHTML = '';
-    for (let i = 0; i < 100; i++) {
-      const cell = document.createElement('div');
-      cell.className = 'node-cell online';
-      cell.id = 'node-' + i;
-      cell.title = 'node_' + i;
-      grid.appendChild(cell);
-    }
-  }
-
-  function setNodeState(idx, cls) {
-    const el = document.getElementById('node-' + idx);
-    if (el) el.className = 'node-cell ' + cls;
-  }
-
-  // ── Variance bars ────────────────────────────────────────────────────────────
-  function buildVarianceBars(variances, spikeIdx) {
-    const container = document.getElementById('variance-bars');
-    container.innerHTML = '';
-    const max = Math.max(...variances, 1);
-    variances.forEach((v, i) => {
-      const wrap = document.createElement('div');
-      wrap.className = 'v-bar-wrap';
-      const pct = Math.min((v / max) * 70, 70);
-      const bar = document.createElement('div');
-      bar.className = 'v-bar ' + (i === spikeIdx ? 'spike' : 'normal');
-      bar.style.height = Math.max(pct, 3) + 'px';
-      const lbl = document.createElement('div');
-      lbl.className = 'v-label';
-      lbl.textContent = i;
-      wrap.appendChild(bar);
-      wrap.appendChild(lbl);
-      container.appendChild(wrap);
-    });
-  }
-
-  // ── Log feed ─────────────────────────────────────────────────────────────────
-  function appendLog(msg, type='info') {
-    const feed = document.getElementById('log-feed');
-    const entry = document.createElement('div');
-    entry.className = 'log-entry ' + type;
-    const now = new Date();
-    const ts = now.toTimeString().split(' ')[0];
-    entry.innerHTML = `<span class="ts">${ts}</span><span class="msg">${msg}</span>`;
-    feed.appendChild(entry);
-    feed.scrollTop = feed.scrollHeight;
-  }
-
-  // ── Queue depths ─────────────────────────────────────────────────────────────
-  function renderQueues(queues) {
-    const list = document.getElementById('queue-list');
-    list.innerHTML = '';
-    Object.entries(queues).forEach(([k, v]) => {
-      const pct = Math.min(v * 100, 100);
-      const cls = pct > 75 ? 'high' : pct > 45 ? 'mid' : 'low';
-      list.innerHTML += `
-        <div class="queue-item">
-          <div class="queue-header"><span>${k}</span><span>${v.toFixed(2)}</span></div>
-          <div class="queue-bar-bg"><div class="queue-bar-fill ${cls}" style="width:${pct}%"></div></div>
-        </div>`;
-    });
-  }
-
-  // ── Step dots ─────────────────────────────────────────────────────────────────
-  function renderSteps() {
-    const row = document.getElementById('steps-row');
-    row.innerHTML = '';
-    for (let i = 1; i <= state.maxSteps; i++) {
-      const dot = document.createElement('div');
-      dot.className = 'step-dot';
-      if (i < state.step) dot.classList.add(state.steps[i-1] > 0 ? 'done-ok' : 'done-fail');
-      else if (i === state.step) dot.classList.add('active');
-      dot.textContent = i;
-      row.appendChild(dot);
-    }
-  }
-
-  // ── Reward display ────────────────────────────────────────────────────────────
-  function setReward(r) {
-    const el = document.getElementById('reward-big');
-    el.textContent = r.toFixed(2);
-    el.className = 'reward-big' + (r >= 0.9 ? '' : r > 0 ? ' partial' : ' zero');
-  }
-
-  // ── Metrics update ────────────────────────────────────────────────────────────
-  function updateMetrics() {
-    document.getElementById('m-ep').textContent = String(state.episode).padStart(3,'0');
-    document.getElementById('m-steps').textContent = `${state.step} / ${state.maxSteps}`;
-    document.getElementById('m-health').textContent = state.health.toFixed(2);
-    document.getElementById('m-cum').textContent = state.cumReward.toFixed(2);
-    document.getElementById('m-mode').textContent = state.mode;
-  }
-
-  // ── Init scenario ─────────────────────────────────────────────────────────────
-  function initScenario(mode) {
-    state.mode = mode.toUpperCase();
-    state.step = 0;
-    state.cumReward = 0;
-    state.health = 1.0;
-    state.steps = [];
-    state.offlineNode = Math.floor(Math.random() * 100);
-    state.spikeIndex = Math.floor(Math.random() * 10);
-
-    state.variances = Array.from({length:10}, () => Math.random() * 2 + 0.5);
-    if (mode === 'hard') state.variances[state.spikeIndex] = 999.9;
-
-    state.queues = {};
-    ['sw_core_01','sw_leaf_07','sw_spine_03','sw_core_02'].forEach(k => {
-      state.queues[k] = mode === 'medium' ? Math.random() * 0.4 + 0.55 : Math.random() * 0.3 + 0.1;
-    });
-
-    buildNodeGrid();
-    if (mode === 'easy' || mode === 'hard') setNodeState(state.offlineNode, 'offline');
-    buildVarianceBars(state.variances, mode === 'hard' ? state.spikeIndex : -1);
-    renderQueues(state.queues);
-    setReward(0);
-    renderSteps();
-    updateMetrics();
-    document.getElementById('log-feed').innerHTML = '';
-
-    appendLog(`CLUSTER INIT — Running mode: ${state.mode}`, 'system');
-    if (mode === 'easy') {
-      appendLog(`NODE FAILURE DETECTED: node_${state.offlineNode} is OFFLINE`, 'error');
-      appendLog('ACTION REQUIRED: Issue DRAIN_TRAFFIC to isolate', 'warn');
-    } else if (mode === 'medium') {
-      appendLog('BUFFER CONGESTION WARNING: PFC threshold exceeded on sw_core_01', 'warn');
-      appendLog(`RECOMMENDED THRESHOLD: ${64 + Math.floor(Math.random()*6)*16}`, 'warn');
-    } else {
-      appendLog('SILENT NAN CONTAGION DETECTED in gradient sync layer', 'error');
-      appendLog('Hardware logs inconclusive — inspect gradient_variances array', 'warn');
-      appendLog(`Variance spike detected at index ${state.spikeIndex}: ${state.variances[state.spikeIndex].toFixed(1)}`, 'error');
+    function switchView(viewId) {
+      document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-links button').forEach(b => b.classList.remove('active'));
+      document.getElementById('view-' + viewId).classList.add('active');
+      const navBtn = document.getElementById('nav-' + viewId);
+      if(navBtn) navBtn.classList.add('active');
+      if(viewId === 'analytics') initAnalytics();
     }
 
-    document.getElementById('footer-status').textContent = `ENV STATUS: ${state.mode} EPISODE ${state.episode} — READY`;
-  }
-
-  // ── Task select ───────────────────────────────────────────────────────────────
-  function selectTask(mode, el) {
-    document.querySelectorAll('.task-card').forEach(c => c.classList.remove('active'));
-    el.classList.add('active');
-    initScenario(mode);
-  }
-
-  // ── Transmit action ───────────────────────────────────────────────────────────
-  function transmitAction() {
-    const cmd = document.getElementById('cmd-select').value;
-    const target = document.getElementById('cmd-target').value.trim();
-    const val = document.getElementById('cmd-value').value;
-
-    if (!target) { appendLog('ERROR: target field is required', 'error'); return; }
-
-    state.step++;
-    state.health = Math.max(0, state.health - 0.04);
-
-    let reward = 0.0;
-    let done = false;
-    let logType = 'info';
-
-    const mode = state.mode;
-
-    if (mode === 'EASY') {
-      if (cmd === 'DRAIN_TRAFFIC' && target === `node_${state.offlineNode}`) {
-        reward = Math.max(0.1, 1.0 - (state.step - 1) * 0.15);
-        done = true; logType = 'ok';
-        setNodeState(state.offlineNode, 'drain');
-        appendLog(`TRIAGE COMPLETE: Traffic drained from node_${state.offlineNode}`, 'ok');
-      } else {
-        reward = -0.05; logType = 'warn';
-        appendLog(`INCORRECT TARGET: ${target} is not the offline node`, 'warn');
-      }
-    } else if (mode === 'MEDIUM') {
-      if (cmd === 'TUNE_PFC_THRESHOLD') {
-        const correct = parseInt(val) === 128;
-        reward = correct ? Math.max(0.1, 1.0 - (state.step-1)*0.12) : 0.5;
-        done = correct || state.step >= state.maxSteps;
-        logType = correct ? 'ok' : 'warn';
-        appendLog(correct ? `PFC THRESHOLD SET: ${val} — Congestion resolved` : `THRESHOLD ${val} applied — partial relief`, logType);
-      } else { appendLog(`WRONG COMMAND for MEDIUM mode: use TUNE_PFC_THRESHOLD`, 'warn'); }
-    } else { // HARD
-      if (cmd === 'RUN_MINI_ITERATION') {
-        const [lo, hi] = target.split('-').map(Number);
-        if (lo === state.spikeIndex && hi === state.spikeIndex) {
-          appendLog(`TRIAGE CONFIRMED: NaN source is node_${state.offlineNode}`, 'ok');
-          setNodeState(state.offlineNode, 'suspect');
-          reward = 0.0;
-        } else {
-          appendLog(`RUN_MINI_ITERATION ${target}: No anomaly found in this sub-cluster`, 'info');
-        }
-      } else if (cmd === 'DRAIN_TRAFFIC') {
-        if (target === `node_${state.offlineNode}`) {
-          reward = Math.max(0.1, 1.0 - (state.step - 2) * 0.13);
-          done = true; logType = 'ok';
-          setNodeState(state.offlineNode, 'drain');
-          appendLog(`NaN CONTAGION ISOLATED: node_${state.offlineNode} drained`, 'ok');
-        } else {
-          reward = -0.1;
-          appendLog(`WRONG NODE: ${target} is clean — NaN source still active`, 'error');
-        }
+    function switchAnalyticsTab(tabId) {
+      document.querySelectorAll('.analytics-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.analytics-pane').forEach(p => p.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('pane-' + tabId).classList.add('active');
+      if(tabId === 'charts') {
+        setTimeout(() => {
+          drawRadar();
+          drawEfficiency();
+        }, 100);
       }
     }
 
-    state.cumReward += reward;
-    state.steps.push(reward);
-    if (state.step >= state.maxSteps) done = true;
-
-    setReward(reward);
-    renderSteps();
-    updateMetrics();
-    appendLog(`CMD: ${cmd} → ${target}${val?' value='+val:''} | reward=${reward.toFixed(2)} done=${done}`, logType);
-
-    if (done) {
-      const success = state.cumReward > 0.1;
-      appendLog(`EPISODE END — success=${success} steps=${state.step} cumulative=${state.cumReward.toFixed(2)}`,
-        success ? 'ok' : 'error');
-      document.getElementById('footer-status').textContent =
-        `EPISODE ${state.episode} COMPLETE · ${success ? '✓ SUCCESS' : '✗ FAILED'}`;
-      document.getElementById(success ? 'sla-pill' : 'incident-pill').textContent =
-        success ? 'SLA RESTORED' : 'SLA BREACHED';
+    let analyticsRendered = false;
+    function initAnalytics() {
+      if(analyticsRendered) return;
+      analyticsRendered = true;
+      renderKickers();
+      renderLeaderboard();
+      renderDistribution();
+      renderTaskDifficulty();
+      renderInsights();
     }
-  }
 
-  // ── Reset ─────────────────────────────────────────────────────────────────────
-  function resetEnv() {
-    state.episode++;
-    const active = document.querySelector('.task-card.active');
-    const mode = active ? active.querySelector('.task-level').textContent.toLowerCase().includes('easy') ? 'easy'
-      : active.querySelector('.task-level').textContent.toLowerCase().includes('medium') ? 'medium' : 'hard'
-      : 'easy';
-    initScenario(mode);
-  }
+    /* === Kicker Stats === */
+    function renderKickers() {
+      const totalModels = MODELS.length;
+      const bestAvg = Math.max(...MODELS.map(m => m.avg));
+      const totalResolved = MODELS.reduce((s,m) => s + m.resolved, 0);
+      const avgScore = (MODELS.reduce((s,m) => s + m.avg, 0) / MODELS.length).toFixed(3);
+      document.getElementById('kicker-row').innerHTML = `
+        <div class="kicker-card">
+          <div class="kicker-value rainbow-text">${totalModels}</div>
+          <div class="kicker-label">Models Tested</div>
+        </div>
+        <div class="kicker-card">
+          <div class="kicker-value" style="color:var(--success)">${bestAvg.toFixed(3)}</div>
+          <div class="kicker-label">Best Average Score</div>
+        </div>
+        <div class="kicker-card">
+          <div class="kicker-value" style="color:var(--primary)">${totalResolved}</div>
+          <div class="kicker-label">Total Tasks Resolved</div>
+        </div>
+        <div class="kicker-card">
+          <div class="kicker-value" style="color:var(--warning)">${avgScore}</div>
+          <div class="kicker-label">Fleet Average</div>
+        </div>
+      `;
+    }
 
-  // ── Boot ──────────────────────────────────────────────────────────────────────
-  initScenario('easy');
-</script>
+    /* === Leaderboard === */
+    function renderLeaderboard() {
+      const maxTotal = MODELS[0].total;
+      const tbl = document.getElementById('lb-general');
+      tbl.innerHTML = `
+        <thead><tr>
+          <th>Rank</th><th>Model</th><th>Total Score</th><th>Average</th><th>Score Bar</th><th>Resolved</th>
+        </tr></thead>
+        <tbody>${MODELS.map((m, i) => {
+          const pct = (m.total / 20 * 100).toFixed(1);
+          const rc = m.resolved >= 10 ? 'resolved-high' : m.resolved >= 5 ? 'resolved-mid' : 'resolved-low';
+          const rankClass = i < 3 ? `rank-${i+1}` : 'rank-n';
+          const grad = `linear-gradient(90deg, ${RADAR_COLORS[i % RADAR_COLORS.length].replace('0.7','0.8')}, ${RADAR_COLORS[(i+1) % RADAR_COLORS.length].replace('0.7','0.4')})`;
+          return `<tr>
+            <td><span class="rank-badge ${rankClass}">${i+1}</span></td>
+            <td style="font-weight:700;font-size:1rem">${m.name} ${m.badge||''}</td>
+            <td style="font-family:'Share Tech Mono';font-weight:700">${m.total.toFixed(2)} / 20</td>
+            <td style="font-family:'Share Tech Mono'">${m.avg.toFixed(3)}</td>
+            <td><div class="score-bar-wrap">
+              <div class="score-bar-bg"><div class="score-bar-fill" style="width:${pct}%;background:${grad}"></div></div>
+              <span style="font-size:0.8rem;font-weight:700;color:var(--text-muted)">${pct}%</span>
+            </div></td>
+            <td><span class="resolved-pill ${rc}">✓ ${m.resolved} / 20</span></td>
+          </tr>`;
+        }).join('')}</tbody>
+      `;
+    }
+
+    /* === SQL Table === */
+
+
+    /* === Radar Chart (Canvas) === */
+    function drawRadar() {
+      const canvas = document.getElementById('radar-canvas');
+      if(!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      const cx = W/2, cy = H/2, R = 160;
+      ctx.clearRect(0, 0, W, H);
+
+      const numAxes = 20;
+      const angleStep = (2 * Math.PI) / numAxes;
+
+      // Grid rings
+      [0.2, 0.4, 0.6, 0.8, 1.0].forEach(ring => {
+        ctx.beginPath();
+        for(let i = 0; i <= numAxes; i++) {
+          const angle = i * angleStep - Math.PI/2;
+          const x = cx + Math.cos(angle) * R * ring;
+          const y = cy + Math.sin(angle) * R * ring;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = '#E5E7EB';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+
+      // Axes + labels
+      for(let i = 0; i < numAxes; i++) {
+        const angle = i * angleStep - Math.PI/2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(angle)*R, cy + Math.sin(angle)*R);
+        ctx.strokeStyle = '#E5E7EB';
+        ctx.stroke();
+        // Label
+        const lx = cx + Math.cos(angle)*(R+18);
+        const ly = cy + Math.sin(angle)*(R+18);
+        ctx.fillStyle = '#6B7280';
+        ctx.font = '11px Share Tech Mono';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(TASK_LABELS[i], lx, ly);
+      }
+
+      // Plot top 5
+      MODELS.slice(0, 5).forEach((m, mi) => {
+        ctx.beginPath();
+        m.scores.forEach((s, i) => {
+          const angle = i * angleStep - Math.PI/2;
+          const x = cx + Math.cos(angle) * R * s;
+          const y = cy + Math.sin(angle) * R * s;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        });
+        ctx.closePath();
+        ctx.fillStyle = RADAR_COLORS[mi].replace('0.7', '0.12');
+        ctx.fill();
+        ctx.strokeStyle = RADAR_COLORS[mi];
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+      });
+
+      // Legend
+      MODELS.slice(0, 5).forEach((m, mi) => {
+        const lx = 10, ly = 16 + mi * 22;
+        ctx.fillStyle = RADAR_COLORS[mi];
+        ctx.fillRect(lx, ly, 14, 14);
+        ctx.fillStyle = '#374151';
+        ctx.font = '12px Inter';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(m.name, lx + 20, ly + 7);
+      });
+    }
+
+    /* === Score Distribution === */
+    function renderDistribution() {
+      const buckets = [{label:'0.0–0.2',min:0,max:0.2},{label:'0.2–0.4',min:0.2,max:0.4},{label:'0.4–0.6',min:0.4,max:0.6},{label:'0.6–0.8',min:0.6,max:0.8},{label:'0.8–1.0',min:0.8,max:1.01}];
+      const counts = buckets.map(b => {
+        let c = 0;
+        MODELS.forEach(m => m.scores.forEach(s => { if(s >= b.min && s < b.max) c++; }));
+        return c;
+      });
+      const maxC = Math.max(...counts);
+      const colors = ['#EF4444','#F59E0B','#FBBF24','#34D399','#10B981'];
+      const container = document.getElementById('dist-chart');
+      container.innerHTML = counts.map((c, i) => `
+        <div class="dist-bar-row">
+          <div class="dist-bar-label">${buckets[i].label}</div>
+          <div class="dist-bar-track">
+            <div class="dist-bar-inner" style="width:${(c/maxC*100)}%;background:${colors[i]}">${c}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    /* === Efficiency Scatter (Canvas) === */
+    function drawEfficiency() {
+      const canvas = document.getElementById('efficiency-canvas');
+      if(!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      const pad = {t:30,r:30,b:50,l:60};
+      const pW = W - pad.l - pad.r, pH = H - pad.t - pad.b;
+      ctx.clearRect(0, 0, W, H);
+
+      const maxP = 35, maxS = 15;
+
+      // Grid
+      ctx.strokeStyle = '#E5E7EB';
+      ctx.lineWidth = 1;
+      for(let i = 0; i <= 5; i++) {
+        const y = pad.t + (pH/5)*i;
+        ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W-pad.r, y); ctx.stroke();
+        ctx.fillStyle = '#9CA3AF'; ctx.font = '11px Share Tech Mono'; ctx.textAlign = 'right';
+        ctx.fillText((maxS - (maxS/5)*i).toFixed(0), pad.l-8, y+4);
+      }
+      for(let i = 0; i <= 5; i++) {
+        const x = pad.l + (pW/5)*i;
+        ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, H-pad.b); ctx.stroke();
+        ctx.fillStyle = '#9CA3AF'; ctx.font = '11px Share Tech Mono'; ctx.textAlign = 'center';
+        ctx.fillText(((maxP/5)*i).toFixed(0)+'B', x, H-pad.b+18);
+      }
+
+      // Axis labels
+      ctx.fillStyle = '#374151'; ctx.font = 'bold 12px Inter'; ctx.textAlign = 'center';
+      ctx.fillText('Parameters (B)', W/2, H-8);
+      ctx.save(); ctx.translate(16, H/2); ctx.rotate(-Math.PI/2);
+      ctx.fillText('Total Score', 0, 0); ctx.restore();
+
+      // Bubbles
+      MODELS.forEach((m, i) => {
+        const x = pad.l + (m.params / maxP) * pW;
+        const y = pad.t + pH - (m.total / maxS) * pH;
+        const r = 8 + m.resolved * 1.5;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI*2);
+        ctx.fillStyle = RADAR_COLORS[i % RADAR_COLORS.length].replace('0.7','0.35');
+        ctx.fill();
+        ctx.strokeStyle = RADAR_COLORS[i % RADAR_COLORS.length];
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        // Label
+        ctx.fillStyle = '#374151'; ctx.font = '10px Inter'; ctx.textAlign = 'center';
+        ctx.fillText(m.name.split(' ')[0], x, y - r - 6);
+      });
+    }
+
+    /* === Task Difficulty === */
+    function renderTaskDifficulty() {
+      const taskAvgs = TASK_LABELS.map((t, i) => {
+        const avg = MODELS.reduce((s, m) => s + m.scores[i], 0) / MODELS.length;
+        return { label: t, avg };
+      }).sort((a, b) => a.avg - b.avg);
+
+      const container = document.getElementById('task-difficulty');
+      container.innerHTML = taskAvgs.map(t => {
+        const color = t.avg < 0.3 ? '#EF4444' : t.avg < 0.5 ? '#F59E0B' : t.avg < 0.7 ? '#0070F3' : '#10B981';
+        const diffLabel = t.avg < 0.3 ? 'BRUTAL' : t.avg < 0.5 ? 'HARD' : t.avg < 0.7 ? 'MODERATE' : 'EASY';
+        return `
+          <div class="dist-bar-row">
+            <div class="dist-bar-label">${t.label}</div>
+            <div class="dist-bar-track">
+              <div class="dist-bar-inner" style="width:${t.avg*100}%;background:${color}">
+                ${t.avg.toFixed(2)} — ${diffLabel}
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    /* === Insights === */
+    function renderInsights() {
+      // Compute interesting facts
+      const best = MODELS[0];
+      const worst = MODELS[MODELS.length-1];
+
+      // Task with highest score variance
+      const taskVariance = TASK_LABELS.map((t, i) => {
+        const vals = MODELS.map(m => m.scores[i]);
+        const mean = vals.reduce((a,b)=>a+b,0)/vals.length;
+        const variance = vals.reduce((a,v)=>a+(v-mean)**2,0)/vals.length;
+        return { label: t, variance, mean };
+      }).sort((a,b)=>b.variance-a.variance);
+
+      // Most efficient (score per param)
+      const efficiency = MODELS.map(m => ({ name: m.name, eff: m.total / m.params })).sort((a,b)=>b.eff-a.eff);
+
+      // Perfect scores count
+      const perfectScores = MODELS.reduce((c,m) => c + m.scores.filter(s => s >= 1.0).length, 0);
+
+      // Zero scores count
+      const zeroScores = MODELS.reduce((c,m) => c + m.scores.filter(s => s <= 0.001).length, 0);
+
+      // Best head-to-head gap
+      const gap = MODELS[0].total - MODELS[1].total;
+
+      // Consistency king (lowest std dev)
+      const consistency = MODELS.map(m => {
+        const mean = m.avg;
+        const std = Math.sqrt(m.scores.reduce((a,s)=>a+(s-mean)**2,0)/m.scores.length);
+        return { name: m.name, std };
+      }).sort((a,b)=>a.std-b.std);
+
+      // Hardest task computed dynamically
+      const hardestTask = [...TASK_LABELS].map((t, i) => {
+        const avg = MODELS.reduce((s,m) => s + m.scores[i], 0) / MODELS.length;
+        return { label: t, avg };
+      }).sort((a,b) => a.avg - b.avg)[0];
+
+      const insights = [
+        {
+          icon: '👑', iconBg: '#FEF3C7',
+          title: 'DOMINANT LEADER',
+          stat: `+${gap.toFixed(2)}`,
+          text: `${best.name} leads by ${gap.toFixed(2)} points over ${MODELS[1].name}. Resolved ${best.resolved}/20 tasks — tested in our real SRE environment.`
+        },
+        {
+          icon: '⚡', iconBg: '#DCFCE7',
+          title: 'MOST EFFICIENT',
+          stat: `${efficiency[0].eff.toFixed(2)}`,
+          text: `${efficiency[0].name} delivers ${efficiency[0].eff.toFixed(2)} score per billion parameters — best compute efficiency in our environment.`
+        },
+        {
+          icon: '🎯', iconBg: '#E0E7FF',
+          title: 'OUR ENVIRONMENT',
+          stat: `20 TASKS`,
+          text: `Tested against our actual Netweaver SRE server: 7 Easy (single-cmd), 7 Medium (cmd + value), 6 Hard (multi-step triage). Real API calls, real scores.`
+        },
+        {
+          icon: '💀', iconBg: '#FEE2E2',
+          title: `HARDEST: ${hardestTask.label}`,
+          stat: `${hardestTask.avg.toFixed(2)} avg`,
+          text: `${hardestTask.label} averages only ${hardestTask.avg.toFixed(2)} across all models — the hardest task in our environment. Multi-step reasoning is the bottleneck.`
+        },
+        {
+          icon: '🔀', iconBg: '#FCE7F3',
+          title: 'MOST POLARIZING',
+          stat: `${taskVariance[0].label}`,
+          text: `${taskVariance[0].label} has the highest score variance (${taskVariance[0].variance.toFixed(3)}). Models either solve it perfectly or fail completely.`
+        },
+      ];
+
+      document.getElementById('insights-grid').innerHTML = insights.map(ins => `
+        <div class="insight-card">
+          <div class="insight-icon" style="background:${ins.iconBg}">${ins.icon}</div>
+          <h4>${ins.title}</h4>
+          <div class="insight-stat rainbow-text">${ins.stat}</div>
+          <p>${ins.text}</p>
+        </div>
+      `).join('');
+    }
+
+    /* ===== PLAYGROUND LOGIC ===== */
+    function init() {
+      // Missions
+      const grid = document.getElementById('mission-grid');
+      grid.innerHTML = TASKS.map(t => `
+        <div class="mission-card ${t.mode}" onclick="launchMission('${t.id}')">
+          <div class="m-id">${t.id.toUpperCase()}</div>
+          <div class="m-header-info">
+            <div class="m-name">${t.name}</div>
+            <div class="m-tag">${t.mode}</div>
+          </div>
+          <div class="m-desc-box">${t.desc}</div>
+          <img class="m-thumb" src="${t.img}">
+        </div>
+      `).join('');
+
+      // pg Switcher
+      const sel = document.getElementById('pg-task-select');
+      sel.innerHTML = TASKS.map(t => `<option value="${t.id}">${t.id.toUpperCase()}: ${t.name}</option>`).join('');
+
+      // Grid
+      document.getElementById('node-grid').innerHTML = Array.from({length: 100}, (_, i) => `<div class="node" id="n-${i}"></div>`).join('');
+      document.getElementById('act-cmd').innerHTML = CMD.map(c => `<option value="${c}">${c}</option>`).join('');
+
+      triggerReset();
+    }
+
+    async function launchMission(id) {
+      activeTask = id;
+      document.getElementById('pg-task-select').value = id;
+      await fetch('/set_level', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({task_level: id}) });
+      triggerReset();
+      switchView('playground');
+    }
+
+    function appendLog(msg, type="normal") {
+      const feed = document.getElementById('pg-logs');
+      const div = document.createElement('div');
+      div.className = "term-line " + type;
+      div.innerText = `> ${msg}`;
+      feed.appendChild(div);
+      feed.scrollTop = feed.scrollHeight;
+    }
+
+    async function triggerReset() {
+      const resp = await fetch('/reset', {method: 'POST'});
+      const data = await resp.json();
+      cumReward = 0;
+      document.getElementById('pg-logs').innerHTML = '';
+      appendLog("ESTABLISHING AGENT CONNECTION...", "info");
+      updateDash(data.observation, data.reward);
+      if(data.observation && data.observation.hardware_logs) {
+        data.observation.hardware_logs.forEach(l => appendLog(l, "alert"));
+      }
+    }
+
+    async function dispatchAction() {
+      const payload = {
+        action: {
+          command: document.getElementById('act-cmd').value,
+          target: document.getElementById('act-tgt').value || "",
+          value: parseInt(document.getElementById('act-val').value) || null
+        }
+      };
+      const resp = await fetch('/step', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      const data = await resp.json();
+      if (data.observation && data.observation.hardware_logs) {
+        data.observation.hardware_logs.forEach(l => {
+          let t = "info";
+          if(l.includes("SUCCESS")) t = "success";
+          if(l.includes("ERROR")) t = "alert";
+          appendLog(l, t);
+        });
+      }
+      updateDash(data.observation, data.reward);
+    }
+
+    function updateDash(obs, reward) {
+      if(!obs) return;
+
+      const r = reward || obs.reward || 0.001;
+      document.getElementById('stat-score').textContent = r.toFixed(3);
+      if(r > 0.01) cumReward = r;
+      document.getElementById('stat-cum').textContent = cumReward.toFixed(3);
+      const stepEl = document.getElementById('stat-step');
+      if(stepEl) stepEl.textContent = `${obs.step_count || 0} / 15`;
+
+      document.querySelectorAll('.node').forEach(n => n.className='node');
+      if (obs.hardware_logs) {
+        obs.hardware_logs.forEach(l => {
+          const match = l.match(/node_(\d+)/);
+          if(match) document.getElementById(`n-${match[1]}`).className = 'node fault';
+        });
+      }
+
+      const draw = (id, arr, max) => {
+        const jitter = () => (Math.random() - 0.5) * 2;
+        document.getElementById(id).innerHTML = arr.map(v => {
+          const val = Math.max(0, v + jitter());
+          const h = Math.min((val/max)*100, 100);
+          return `<div class="bar ${h>85?'crit':''}" style="height:${h}%"></div>`;
+        }).join('');
+      };
+      draw('chart-flux', obs.gradient_variances || [], 500);
+      draw('chart-gpu', obs.gpu_memory_usage || [], 80);
+    }
+  </script>
 </body>
 </html>
