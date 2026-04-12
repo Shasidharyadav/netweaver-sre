@@ -1111,8 +1111,9 @@
       style="max-width: 1000px; margin: 0 auto; background: #fff; padding: 60px; border-radius: 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);">
       <h1 class="rainbow-text" style="font-size: 4rem;">PROTOCOL HANDBOOK</h1>
       <p style="font-size: 1.25rem; line-height: 1.8; color: #4B5563; margin: 30px 0; font-weight: 500;">
-        Welcome to the <span class="rainbow-text" style="font-weight: 700;">Cyberpunk Ops Center</span>. You are
-        authorized to stabilize the 100-node GPU cluster through the Netweaver SRE interface.
+        <strong>NetWeaver SRE</strong> is an advanced, stateful simulation environment designed to train and benchmark AI agents (and humans!) in high-stakes Site Reliability Engineering scenarios.
+        <br><br>
+        Welcome to the <span class="rainbow-text" style="font-weight: 700;">Cyberpunk Ops Center</span>. You are authorized to stabilize the 100-node GPU cluster through the Netweaver SRE interface. Unlike basic "guess the command" simulators, NetWeaver forces you to act like a real engineer.
       </p>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px;">
@@ -1131,14 +1132,13 @@
         </div>
         <div
           style="background:var(--bg-color); border-radius:16px; padding:30px; border:1px solid var(--border-color);">
-          <h2 class="rainbow-text" style="font-size: 1.8rem; margin-bottom: 20px;">PHASE 2 READY</h2>
-          <p style="font-size:0.95rem; color: #4B5563; line-height: 1.7;">Fully aligned with OpenEnv Phase 2 validation
-            protocols:</p>
+          <h2 class="rainbow-text" style="font-size: 1.8rem; margin-bottom: 20px;">DETERMINISTIC GRADING</h2>
+          <p style="font-size:0.95rem; color: #4B5563; line-height: 1.7;">Your performance is evaluated by a rigorous engine to score a perfect 1.0:</p>
           <ul style="margin-top: 15px; font-size: 0.9rem; line-height: 1.8; color: #6B7280;">
-            <li>✓ <strong>Score Clamping</strong>: All rewards within [0.001, 0.999].</li>
-            <li>✓ <strong>Standard Logs</strong>: Exact [START]/[STEP]/[END] regex matching.</li>
-            <li>✓ <strong>Socat Bridging</strong>: Instant HF Space startup on port 8000.</li>
-            <li>✓ <strong>LFS Logic</strong>: High-fidelity assets managed via Git LFS.</li>
+            <li><strong style="color:var(--primary)">40% Diagnosis</strong>: You must read the logs/telemetry before acting.</li>
+            <li><strong style="color:var(--success)">40% Resolution</strong>: Deploy the correct fix to the correct target.</li>
+            <li><strong style="color:var(--warning)">20% Best Practices</strong>: Spamming commands drains your score.</li>
+            <li><strong style="color:var(--danger)">Destructive Penalty</strong>: Nuking the cluster instantly terminates the run.</li>
           </ul>
         </div>
       </div>
@@ -1167,47 +1167,66 @@
         </div>
       </div>
 
-      <div style="margin-top: 50px; padding: 40px; background: #EEF2FF; border-radius: 20px; border-left: 10px solid var(--primary);">
+      <div
+        style="margin-top: 50px; padding: 40px; background: #EEF2FF; border-radius: 20px; border-left: 10px solid var(--primary);">
         <h2 class="rainbow-text" style="font-size: 2rem; margin-bottom:30px;">HOW TO PLAY: OPERATIONAL FLOW</h2>
-        
+
         <div style="display: grid; grid-template-columns: 1fr; gap: 30px;">
-          
+
           <div style="display: flex; gap: 25px; align-items: center;">
-            <div style="background: var(--primary); color: #fff; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Anton'; font-size: 1.4rem; flex-shrink: 0; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);">1</div>
+            <div
+              style="background: var(--primary); color: #fff; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Anton'; font-size: 1.4rem; flex-shrink: 0; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);">
+              1</div>
             <div>
               <h3 style="font-family: 'Anton'; font-size: 1.4rem; color: var(--text-dark);">SIGNAL IDENTIFICATION</h3>
-              <p style="color: #4B5563; font-size: 1rem;">Go to <strong>MISSIONS</strong>. Pick a scenario. In the <strong>PLAYGROUND</strong>, look for pulsing <span style="color:var(--danger); font-weight:700;">RED</span> nodes in the topology grid.</p>
+              <p style="color: #4B5563; font-size: 1rem;">Go to <strong>MISSIONS</strong>. Pick a scenario. In the
+                <strong>PLAYGROUND</strong>, look for pulsing <span
+                  style="color:var(--danger); font-weight:700;">RED</span> nodes in the topology grid.
+              </p>
             </div>
           </div>
 
           <div style="display: flex; gap: 25px; align-items: center;">
-            <div style="background: var(--primary); color: #fff; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Anton'; font-size: 1.4rem; flex-shrink: 0; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);">2</div>
+            <div
+              style="background: var(--primary); color: #fff; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Anton'; font-size: 1.4rem; flex-shrink: 0; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);">
+              2</div>
             <div>
               <h3 style="font-family: 'Anton'; font-size: 1.4rem; color: var(--text-dark);">STDOUT ANALYSIS</h3>
-              <p style="color: #4B5563; font-size: 1rem;">Scan the <strong>TERMINAL STDOUT</strong>. Look for log lines starting with <code>ERROR</code> or <code>ALERT</code> showing specific Node IDs (e.g., <code>node_42</code>).</p>
+              <p style="color: #4B5563; font-size: 1rem;">Scan the <strong>TERMINAL STDOUT</strong>. Look for log lines
+                starting with <code>ERROR</code> or <code>ALERT</code> showing specific Node IDs (e.g.,
+                <code>node_42</code>).
+              </p>
             </div>
           </div>
 
           <div style="display: flex; gap: 25px; align-items: center;">
-            <div style="background: var(--primary); color: #fff; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Anton'; font-size: 1.4rem; flex-shrink: 0; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);">3</div>
+            <div
+              style="background: var(--primary); color: #fff; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Anton'; font-size: 1.4rem; flex-shrink: 0; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);">
+              3</div>
             <div>
               <h3 style="font-family: 'Anton'; font-size: 1.4rem; color: var(--text-dark);">REMEDIATION ACTION</h3>
-              <p style="color: #4B5563; font-size: 1rem;">Enter the <code>Node ID</code> in the target input. Select the remediation command (e.g., <code>DRAIN_TRAFFIC</code>) and click <strong>DEPLOY ACTION</strong>.</p>
+              <p style="color: #4B5563; font-size: 1rem;">Enter the <code>Node ID</code> in the target input. Select the
+                remediation command (e.g., <code>DRAIN_TRAFFIC</code>) and click <strong>DEPLOY ACTION</strong>.</p>
             </div>
           </div>
 
           <div style="display: flex; gap: 25px; align-items: center;">
-            <div style="background: var(--primary); color: #fff; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Anton'; font-size: 1.4rem; flex-shrink: 0; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);">4</div>
+            <div
+              style="background: var(--primary); color: #fff; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Anton'; font-size: 1.4rem; flex-shrink: 0; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);">
+              4</div>
             <div>
               <h3 style="font-family: 'Anton'; font-size: 1.4rem; color: var(--text-dark);">SLA VERIFICATION</h3>
-              <p style="color: #4B5563; font-size: 1rem;">A correct fix stops the red pulse. The <strong>REWARD SIGNAL</strong> will update. Aim for <span style="color:var(--success); font-weight:700;">1.000</span> before the 15-tick limit.</p>
+              <p style="color: #4B5563; font-size: 1rem;">A correct fix stops the red pulse. The <strong>REWARD
+                  SIGNAL</strong> will update. Aim for <span style="color:var(--success); font-weight:700;">1.000</span>
+                before the 15-tick limit.</p>
             </div>
           </div>
 
         </div>
 
         <!-- WALKTHROUGH EXAMPLE -->
-        <div style="margin-top: 40px; padding: 25px; background: #fff; border-radius: 12px; border: 1px dashed var(--primary);">
+        <div
+          style="margin-top: 40px; padding: 25px; background: #fff; border-radius: 12px; border: 1px dashed var(--primary);">
           <h4 style="font-family: 'Anton'; color: var(--primary);">📖 QUICK START: TASK T01</h4>
           <ol style="margin-top: 10px; font-size: 0.95rem; color: #4B5563; line-height: 1.7; padding-left: 20px;">
             <li>Select <strong>T01: NODE OFFLINE</strong> in MISSIONS.</li>
@@ -1217,15 +1236,17 @@
           </ol>
         </div>
 
-        <div style="margin-top: 30px; padding: 20px; background: #FEE2E2; border-radius: 12px; border-left: 6px solid #EF4444;">
+        <div
+          style="margin-top: 30px; padding: 20px; background: #FEE2E2; border-radius: 12px; border-left: 6px solid #EF4444;">
           <h4 style="font-family: 'Anton'; color: #991B1B;">⚠️ EXPERT TIP: SILENT FAILURES</h4>
-          <p style="font-size: 0.95rem; color: #B91C1C;">For <strong>HARD</strong> missions (T15+), nodes do not pulse red. You must analyze the <strong>GRADIENT FLUX</strong> chart and use <code>RUN_MINI_ITERATION</code> to hunt for silent corruption.</p>
+          <p style="font-size: 0.95rem; color: #B91C1C;">For <strong>HARD</strong> missions (T15+), nodes do not pulse
+            red. You must analyze the <strong>GRADIENT FLUX</strong> chart and use <code>RUN_MINI_ITERATION</code> to
+            hunt for silent corruption.</p>
         </div>
 
       </div>
 
       <div style="margin-top: 60px; padding-top: 30px; border-top: 1px solid var(--border-color); text-align: center;">
-        <p style="font-family:'Anton'; color:var(--text-muted); font-size:1.1rem; letter-spacing:2px;">NETWEAVER SRE // DESIGNED FOR THE RL CHALLENGE 2026</p>
       </div>
     </div>
   </section>

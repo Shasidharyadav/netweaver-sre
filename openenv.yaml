@@ -6,162 +6,245 @@ app: server.app:app
 port: 7860
 
 tasks:
+
+  # ── EASY ──────────────────────────────────────────────────────────────────
+
   - id: netweaver_sre_t01
     difficulty: easy
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t01
     description: >
-      Node Offline Triage. Identify offline node. Isolate with DRAIN_TRAFFIC.
+      Node Offline Triage. Read hardware_logs to find the offline node.
+      Remediate with DRAIN_TRAFFIC on the identified node.
+      Scored on: diagnosis (40%) + resolution (40%) + best practice (20%).
 
   - id: netweaver_sre_t02
     difficulty: easy
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t02
     description: >
-      Stale DNS Cache. DNS resolution failing. Issue CLEAR_DNS_CACHE.
+      Stale DNS Cache. Read hardware_logs to identify the node.
+      Issue CLEAR_DNS_CACHE on the affected node.
+      Scored on: diagnosis (40%) + resolution (40%) + best practice (20%).
 
   - id: netweaver_sre_t03
     difficulty: easy
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t03
     description: >
-      OOM Crash. Service crashed due to OOM. Issue RESTART_SERVICE.
+      OOM Crash. Read hardware_logs for the crashed service name.
+      Issue RESTART_SERVICE on that service.
+      Scored on: diagnosis (40%) + resolution (40%) + best practice (20%).
 
   - id: netweaver_sre_t04
     difficulty: easy
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t04
     description: >
-      TLS Cert Expiry. Certificate expired. Issue RENEW_CERTIFICATE.
+      TLS Certificate Expiry. Read hardware_logs for the affected node.
+      Issue RENEW_CERTIFICATE on that node.
+      Scored on: diagnosis (40%) + resolution (40%) + best practice (20%).
 
   - id: netweaver_sre_t05
     difficulty: easy
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t05
     description: >
-      Disk Space Full. Node disk space 100%. Issue CLEAR_TEMP_FILES.
+      Disk Space Full. Read hardware_logs for the full node.
+      Issue CLEAR_TEMP_FILES on that node.
+      Scored on: diagnosis (40%) + resolution (40%) + best practice (20%).
 
   - id: netweaver_sre_t06
     difficulty: easy
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t06
     description: >
-      Unhealthy Pod. Kubernetes pod stuck. Issue RESTART_POD.
+      Unhealthy Pod in CrashLoopBackOff. Read hardware_logs for the pod name.
+      Issue RESTART_POD on that pod.
+      Scored on: diagnosis (40%) + resolution (40%) + best practice (20%).
 
   - id: netweaver_sre_t07
     difficulty: easy
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t07
     description: >
-      Zombie Process. Zombie process found. Issue KILL_ZOMBIE_PROCESS.
+      Zombie Process filling PID table. Read hardware_logs for the node.
+      Issue KILL_ZOMBIE_PROCESS on that node.
+      Scored on: diagnosis (40%) + resolution (40%) + best practice (20%).
+
+  # ── MEDIUM ────────────────────────────────────────────────────────────────
 
   - id: netweaver_sre_t08
     difficulty: medium
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t08
     description: >
-      PFC Buffer Tuning. Buffer congestion on switch. Issue TUNE_PFC_THRESHOLD with correct threshold.
+      PFC Buffer Congestion. Read queue_depths for the switch near 99.9.
+      Issue TUNE_PFC_THRESHOLD on that switch with a numeric value (1000-9000).
+      Grader checks correct target AND value in valid range.
+      Efficiency penalty applied for steps beyond ideal (3).
+      Scored on: diagnosis (40%) + resolution+efficiency (40%) + best practice (20%).
 
   - id: netweaver_sre_t09
     difficulty: medium
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t09
     description: >
-      Power Throttling. Node power throttled. Issue ADJUST_POWER_CAP with power watts.
+      Power Throttling. Read hardware_logs for node and recommended wattage.
+      Issue ADJUST_POWER_CAP on that node with the watt value.
+      Efficiency penalty applied for steps beyond ideal (3).
+      Scored on: diagnosis (40%) + resolution+efficiency (40%) + best practice (20%).
 
   - id: netweaver_sre_t10
     difficulty: medium
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t10
     description: >
-      BGP Route Flap. BGP flapping. Issue MITIGATE_ROUTE_FLAP with AS number.
+      BGP Route Flapping. Read hardware_logs for router and AS number.
+      Issue MITIGATE_ROUTE_FLAP on that router with the AS number as value.
+      Efficiency penalty applied for steps beyond ideal (3).
+      Scored on: diagnosis (40%) + resolution+efficiency (40%) + best practice (20%).
 
   - id: netweaver_sre_t11
     difficulty: medium
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t11
     description: >
-      Packet Drop. Jumbo frames dropping. Issue INCREASE_MTU with 9000.
+      Jumbo Frame Packet Drop (MTU mismatch). Read queue_depths/logs for switch.
+      Issue INCREASE_MTU on that switch with value exactly 9000.
+      Efficiency penalty applied for steps beyond ideal (3).
+      Scored on: diagnosis (40%) + resolution+efficiency (40%) + best practice (20%).
 
   - id: netweaver_sre_t12
     difficulty: medium
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t12
     description: >
-      API Rate Limiting. DDoS detected. Issue SET_RATE_LIMIT with request count.
+      DDoS API flood. Read hardware_logs for the gateway name.
+      Issue SET_RATE_LIMIT on the gateway with a numeric req/s value.
+      Efficiency penalty applied for steps beyond ideal (3).
+      Scored on: diagnosis (40%) + resolution+efficiency (40%) + best practice (20%).
 
   - id: netweaver_sre_t13
     difficulty: medium
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t13
     description: >
-      Conn Pool Exhaustion. DB connections maxed. Issue SCALE_CONN_POOL with size.
+      DB Connection Pool Exhaustion. Read hardware_logs for DB target.
+      Issue SCALE_CONN_POOL on that DB with the new pool size as value.
+      Efficiency penalty applied for steps beyond ideal (3).
+      Scored on: diagnosis (40%) + resolution+efficiency (40%) + best practice (20%).
 
   - id: netweaver_sre_t14
     difficulty: medium
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t14
     description: >
-      CPU Context Switch. High context switching. Issue PIN_CPU_THREADS with count.
+      CPU Context Switch Storm. Read hardware_logs for node and thread count.
+      Issue PIN_CPU_THREADS on that node with thread count as value.
+      Efficiency penalty applied for steps beyond ideal (3).
+      Scored on: diagnosis (40%) + resolution+efficiency (40%) + best practice (20%).
+
+  # ── HARD ──────────────────────────────────────────────────────────────────
 
   - id: netweaver_sre_t15
     difficulty: hard
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t15
     description: >
-      Silent NaN Contagion. Check gradient_variances array. RUN_MINI_ITERATION to isolate, then DRAIN_TRAFFIC.
+      Silent NaN Contagion. Read gradient_variances for ranks with value -1.0.
+      Multi-step: (1) RUN_MINI_ITERATION on affected cluster to isolate,
+      then (2) DRAIN_TRAFFIC on same cluster to remove from pool.
+      Both commands required for full resolution score.
+      Efficiency penalty applied for steps beyond ideal (4).
+      Scored on: diagnosis (40%) + resolution+efficiency (40%) + best practice (20%).
 
   - id: netweaver_sre_t16
     difficulty: hard
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t16
     description: >
-      Broadcast Storm. Check queue_depths array. Switch is maxed. ISOLATE_BROADCAST_STORM.
+      Broadcast Storm. Read queue_depths for the switch at 99.9.
+      Issue ISOLATE_BROADCAST_STORM on that exact switch.
+      Efficiency penalty applied for steps beyond ideal (3).
+      Scored on: diagnosis (40%) + resolution+efficiency (40%) + best practice (20%).
 
   - id: netweaver_sre_t17
     difficulty: hard
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t17
     description: >
-      GPU Memory Leak. Check gpu_memory_usage array. Spike on cluster. RESTART_GPU_DAEMON.
+      GPU Memory Leak. Read gpu_memory_usage for the cluster index near 1.0.
+      Issue RESTART_GPU_DAEMON on cluster_<that index>.
+      Efficiency penalty applied for steps beyond ideal (3).
+      Scored on: diagnosis (40%) + resolution+efficiency (40%) + best practice (20%).
 
   - id: netweaver_sre_t18
     difficulty: hard
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t18
     description: >
-      Cluster Deadlock. All arrays frozen at 0.0. ISSUE_GLOBAL_ROLLBACK on cluster_0.
+      Full Cluster Deadlock. All arrays frozen at 0.0 — distributed deadlock.
+      Issue ISSUE_GLOBAL_ROLLBACK with target cluster_0.
+      Efficiency penalty applied for steps beyond ideal (3).
+      Scored on: diagnosis (40%) + resolution (40%) + best practice (20%).
 
   - id: netweaver_sre_t19
     difficulty: hard
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t19
     description: >
-      Network Partition. queue_depths split (0.01 / 99.9). REBOOT_LEAF_SWITCHES on pod.
+      Network Partition. Read queue_depths for the split (0.01 vs 99.9).
+      Issue REBOOT_LEAF_SWITCHES on the pod with the maxed entry.
+      Efficiency penalty applied for steps beyond ideal (4).
+      Scored on: diagnosis (40%) + resolution+efficiency (40%) + best practice (20%).
 
   - id: netweaver_sre_t20
     difficulty: hard
     grader:
       type: deterministic
       endpoint: /grader
+      task_level: t20
     description: >
-      Corrupt DB Block. Check health array. Continual drop. PURGE_CORRUPT_BLOCK on exact cluster index.
+      Corrupt DB Block. Read system_health for the index dropping below 0.5.
+      Issue PURGE_CORRUPT_BLOCK on cluster_<exact index>.
+      Efficiency penalty applied for steps beyond ideal (4).
+      Scored on: diagnosis (40%) + resolution+efficiency (40%) + best practice (20%).
