@@ -766,7 +766,7 @@
       <button id="nav-missions" class="active" onclick="switchView('missions')">MISSIONS</button>
       <button id="nav-playground" onclick="switchView('playground')">PLAYGROUND</button>
       <button id="nav-analytics" onclick="switchView('analytics')">ANALYTICS</button>
-      <button id="nav-readme" onclick="switchView('readme')">README</button>
+      <button id="nav-about" onclick="switchView('about')">ABOUT</button>
     </nav>
   </header>
 
@@ -916,17 +916,59 @@
     <div class="hm-tooltip" id="hm-tooltip"></div>
   </section>
 
-  <!-- README -->
-  <section id="view-readme" class="view-container">
-    <div style="max-width: 900px; margin: 0 auto; background: #fff; padding: 60px; border-radius: 24px;">
+  <!-- ABOUT / PROTOCOL HANDBOOK -->
+  <section id="view-about" class="view-container">
+    <div style="max-width: 1000px; margin: 0 auto; background: #fff; padding: 60px; border-radius: 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);">
       <h1 class="rainbow-text" style="font-size: 4rem;">PROTOCOL HANDBOOK</h1>
-      <p style="font-size: 1.2rem; line-height: 1.8; color: #4B5563; margin: 30px 0;">Netweaver SRE is a high-performance simulation testing the resilience of autonomous infrastructure agents. Stabilize the 100-node GPU cluster before the 15-tick chronological timer expires.</p>
-      <h2 class="rainbow-text" style="font-size: 2rem; margin-top: 40px;">CORE COMMANDS</h2>
-      <ul style="margin: 20px 0; padding-left: 20px; font-size: 1.1rem; line-height: 2;">
-        <li><code>DRAIN_TRAFFIC</code>: Isolate nodes encountering severe anomalies.</li>
-        <li><code>RUN_MINI_ITERATION</code>: Perform precise diagnostics on selected pod segments.</li>
-        <li><code>RESTART_SERVICE</code>: Force-reboot software endpoints after OOM events.</li>
-      </ul>
+      <p style="font-size: 1.25rem; line-height: 1.8; color: #4B5563; margin: 30px 0; font-weight: 500;">
+        Welcome to the <span class="rainbow-text" style="font-weight: 700;">Cyberpunk Ops Center</span>. You are authorized to stabilize the 100-node GPU cluster through the Netweaver SRE interface.
+      </p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px;">
+        <div>
+          <h2 class="rainbow-text" style="font-size: 1.8rem; margin-bottom: 20px;">CORE MISSIONS</h2>
+          <p style="color: var(--text-muted); margin-bottom: 20px; line-height: 1.6;">Our environment features 20 specialized site reliability missions across three intensity tiers:</p>
+          <ul style="padding-left: 20px; font-size: 1rem; line-height: 2.2; color: #374151;">
+            <li><strong style="color:var(--success)">EASY [T01-T07]</strong>: DNS Triage, OOM Recovery, TLS Renewal.</li>
+            <li><strong style="color:var(--primary)">MEDIUM [T08-T14]</strong>: PFC Buffer Tuning, BGP Flapping, Power Caps.</li>
+            <li><strong style="color:var(--danger)">HARD [T15-T20]</strong>: NaN Contagion, Broadcast Storms, Deadlocks.</li>
+          </ul>
+        </div>
+        <div style="background:var(--bg-color); border-radius:16px; padding:30px; border:1px solid var(--border-color);">
+          <h2 class="rainbow-text" style="font-size: 1.8rem; margin-bottom: 20px;">PHASE 2 READY</h2>
+          <p style="font-size:0.95rem; color: #4B5563; line-height: 1.7;">Fully aligned with OpenEnv Phase 2 validation protocols:</p>
+          <ul style="margin-top: 15px; font-size: 0.9rem; line-height: 1.8; color: #6B7280;">
+            <li>✓ <strong>Score Clamping</strong>: All rewards within [0.001, 0.999].</li>
+            <li>✓ <strong>Standard Logs</strong>: Exact [START]/[STEP]/[END] regex matching.</li>
+            <li>✓ <strong>Socat Bridging</strong>: Instant HF Space startup on port 8000.</li>
+            <li>✓ <strong>LFS Logic</strong>: High-fidelity assets managed via Git LFS.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h2 class="rainbow-text" style="font-size: 2rem; margin-top: 50px; margin-bottom:30px;">SRE COMMAND REFERENCE</h2>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+        <div style="background:#F8FAFC; padding:15px; border-radius:10px; border-left:4px solid var(--primary);">
+          <code style="font-weight:700; color:var(--primary);">DRAIN_TRAFFIC</code>
+          <p style="font-size:0.85rem; color:var(--text-muted); margin-top:5px;">Isolate compromised or failing nodes immediately.</p>
+        </div>
+        <div style="background:#F8FAFC; padding:15px; border-radius:10px; border-left:4px solid var(--success);">
+          <code style="font-weight:700; color:var(--success);">TUNE_PFC_THRESHOLD</code>
+          <p style="font-size:0.85rem; color:var(--text-muted); margin-top:5px;">Optimize switch buffers based on congestion depth.</p>
+        </div>
+        <div style="background:#F8FAFC; padding:15px; border-radius:10px; border-left:4px solid var(--warning);">
+          <code style="font-weight:700; color:var(--warning);">RUN_MINI_ITERATION</code>
+          <p style="font-size:0.85rem; color:var(--text-muted); margin-top:5px;">Low-rank diagnostics to locate silent NaN contagion.</p>
+        </div>
+        <div style="background:#F8FAFC; padding:15px; border-radius:10px; border-left:4px solid var(--danger);">
+          <code style="font-weight:700; color:var(--danger);">GLOBAL_ROLLBACK</code>
+          <p style="font-size:0.85rem; color:var(--text-muted); margin-top:5px;">Emergency state reset for total cluster deadlocks.</p>
+        </div>
+      </div>
+      
+      <div style="margin-top: 60px; padding-top: 30px; border-top: 1px solid var(--border-color); text-align: center;">
+        <p style="font-family:'Anton'; color:var(--text-muted); font-size:1.1rem; letter-spacing:2px;">NETWEAVER SRE // DESIGNED FOR THE RL CHALLENGE 2026</p>
+      </div>
     </div>
   </section>
 
