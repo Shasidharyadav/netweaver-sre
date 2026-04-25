@@ -98,7 +98,20 @@ def build_prompt(obs: dict, task_level: str) -> str:
     )
 
 
+_NULLISH = {"none", "null", "nil", "n/a", "na", "undefined", "", "false"}
+
+
 def parse_action(text: str) -> Dict[str, Optional[int]]:
+    """Robustly parse a JSON-ish action from a model completion.
+
+    Handles cases where the model emits the value field as:
+      - actual JSON null           → None
+      - integer 9000               → 9000
+      - float 9000.0               → 9000
+      - string "9000"              → 9000
+      - string "none"/"null"/""    → None
+      - any other unparseable junk → None  (instead of crashing)
+    """
     payload = {"command": "UNKNOWN", "target": "unknown", "value": None}
     m = re.search(r"\{[\s\S]*\}", text)
     if not m:
@@ -107,10 +120,34 @@ def parse_action(text: str) -> Dict[str, Optional[int]]:
         data = json.loads(m.group(0))
     except Exception:
         return payload
-    payload["command"] = str(data.get("command", "UNKNOWN")).upper()
-    payload["target"] = str(data.get("target", "unknown"))
+    if not isinstance(data, dict):
+        return payload
+
+    payload["command"] = str(data.get("command", "UNKNOWN")).upper().strip()
+    payload["target"] = str(data.get("target", "unknown")).strip()
+
     raw = data.get("value")
-    payload["value"] = int(raw) if raw is not None else None
+    if raw is None:
+        payload["value"] = None
+    elif isinstance(raw, bool):
+        payload["value"] = int(raw)
+    elif isinstance(raw, (int, float)):
+        try:
+            payload["value"] = int(raw)
+        except (TypeError, ValueError, OverflowError):
+            payload["value"] = None
+    elif isinstance(raw, str):
+        s = raw.strip().lower()
+        if s in _NULLISH:
+            payload["value"] = None
+        else:
+            try:
+                payload["value"] = int(float(s))  # float first to handle "9000.0"
+            except (TypeError, ValueError):
+                payload["value"] = None
+    else:
+        payload["value"] = None
+
     return payload
 
 
