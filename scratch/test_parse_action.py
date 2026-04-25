@@ -16,6 +16,9 @@ cases = [
     ('not json', None),
     ('{}', None),
     ('   {"command": "drain_traffic", "target": " node_99 ", "value": "none"}  ', None),
+    # New regex: prefer the LAST valid {...} object (model emits "thinking + action")
+    ('Thinking: {"plan": "drain"} Final action: {"command":"DRAIN_TRAFFIC","target":"node_07","value":null}', None),
+    ('{"reasoning": "high"} {"command":"INCREASE_MTU","target":"sw","value":9000}', 9000),
 ]
 
 ok = True

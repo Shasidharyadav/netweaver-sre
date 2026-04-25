@@ -51,32 +51,52 @@ def _difficulty_for_task(level: str) -> str:
 # ── Lightweight HTTP client ───────────────────────────────────────────────────
 
 class EnvAdapter:
-    """Direct HTTP adapter — robust to varying OpenEnv client versions."""
+    """Direct HTTP adapter with retry + broad exception handling.
 
-    def __init__(self, env_url: str):
+    Every public method NEVER raises — it returns an empty dict on any
+    network/JSON failure. With ~300 HTTP calls per training run, this
+    is essential to avoid losing the whole job to a transient 502.
+    """
+
+    DEFAULT_RETRIES = 3
+    DEFAULT_BACKOFF = 0.5  # seconds, doubles each attempt
+
+    def __init__(self, env_url: str, retries: int = DEFAULT_RETRIES):
         self.env_url = env_url
+        self.retries = retries
 
-    def _post(self, endpoint: str, payload: dict) -> dict:
-        r = requests.post(f"{self.env_url}/{endpoint}", json=payload, timeout=60)
-        r.raise_for_status()
-        return r.json()
+    def _request(self, method: str, endpoint: str, payload: Optional[dict] = None) -> dict:
+        url = f"{self.env_url}/{endpoint}"
+        last_err = None
+        for attempt in range(1, self.retries + 1):
+            try:
+                if method == "POST":
+                    r = requests.post(url, json=payload or {}, timeout=60)
+                else:
+                    r = requests.get(url, timeout=60)
+                r.raise_for_status()
+                return r.json()
+            except (requests.HTTPError, requests.ConnectionError, requests.Timeout,
+                    requests.RequestException, json.JSONDecodeError, ValueError) as e:
+                last_err = e
+                if attempt < self.retries:
+                    time.sleep(self.DEFAULT_BACKOFF * (2 ** (attempt - 1)))
+        # All retries failed — log once, return empty dict (callers tolerate it)
+        print(f"[ENV] {method} /{endpoint} failed after {self.retries} attempts: {last_err}",
+              flush=True)
+        return {}
 
-    def _get(self, endpoint: str) -> dict:
-        r = requests.get(f"{self.env_url}/{endpoint}", timeout=60)
-        r.raise_for_status()
-        return r.json()
-
-    def set_level(self, level: str) -> None:
-        self._post("set_level", {"task_level": level})
+    def set_level(self, level: str) -> dict:
+        return self._request("POST", "set_level", {"task_level": level})
 
     def reset(self) -> dict:
-        return self._post("reset", {})
+        return self._request("POST", "reset", {})
 
     def step(self, action: Dict[str, Any]) -> dict:
-        return self._post("step", {"action": action})
+        return self._request("POST", "step", {"action": action})
 
     def grader(self) -> dict:
-        return self._get("grader")
+        return self._request("GET", "grader")
 
 
 def clamp_score(raw: float) -> float:
@@ -113,14 +133,26 @@ def parse_action(text: str) -> Dict[str, Optional[int]]:
       - any other unparseable junk → None  (instead of crashing)
     """
     payload = {"command": "UNKNOWN", "target": "unknown", "value": None}
-    m = re.search(r"\{[\s\S]*\}", text)
-    if not m:
+    if not isinstance(text, str):
         return payload
-    try:
-        data = json.loads(m.group(0))
-    except Exception:
-        return payload
-    if not isinstance(data, dict):
+
+    # Try every {...} candidate (non-greedy first, then greedy fallback).
+    # The model often emits "thinking: {...}\nfinal: {...}" — we want the
+    # last *valid* JSON object, which is typically the action.
+    candidates = re.findall(r"\{[^{}]*\}", text)        # non-nested first
+    candidates += [text[text.find("{"):text.rfind("}") + 1]] if "{" in text and "}" in text else []
+
+    data = None
+    for cand in reversed(candidates):                    # last valid wins
+        try:
+            obj = json.loads(cand)
+            if isinstance(obj, dict) and "command" in obj:
+                data = obj
+                break
+        except Exception:
+            continue
+
+    if data is None:
         return payload
 
     payload["command"] = str(data.get("command", "UNKNOWN")).upper().strip()
@@ -186,23 +218,24 @@ def generate_action(model, tokenizer, obs: dict, task_level: str) -> Dict[str, O
 def run_episode(env: EnvAdapter, model, tokenizer, task_level: str,
                 max_steps: int = MAX_STEPS_PER_EPISODE) -> float:
     env.set_level(task_level)
-    resp = env.reset()
+    resp = env.reset() or {}
     obs = resp.get("observation", {})
     done = bool(resp.get("done", False))
 
     for _ in range(max_steps):
         if done:
             break
-        action = generate_action(model, tokenizer, obs, task_level)
         try:
-            step_resp = env.step(action)
-        except requests.HTTPError:
+            action = generate_action(model, tokenizer, obs, task_level)
+        except Exception as e:
+            print(f"[EVAL] generate_action failed: {e}", flush=True)
             break
+        step_resp = env.step(action)            # never raises
         obs = step_resp.get("observation", {})
         done = bool(step_resp.get("done", False))
 
-    grader = env.grader()
-    return clamp_score(grader.get("total", 0.001))
+    grader = env.grader() or {}
+    return clamp_score(grader.get("total", 0.001) or 0.001)
 
 
 def evaluate_model(env: EnvAdapter, model, tokenizer, episodes: int = EVAL_EPISODES
@@ -222,11 +255,18 @@ def evaluate_model(env: EnvAdapter, model, tokenizer, episodes: int = EVAL_EPISO
 def make_training_dataset(env: EnvAdapter, n: int = 128):
     from datasets import Dataset
     rows = []
+    failures = 0
     for _ in range(n):
         level = random.choice(TASK_LEVELS)
         env.set_level(level)
-        obs = env.reset().get("observation", {})
+        obs = (env.reset() or {}).get("observation", {})
+        if not obs:
+            failures += 1
+            # Fallback: synth a minimal prompt so the dataset is never empty
+            obs = {"alert": f"[fallback prompt for {level}]"}
         rows.append({"prompt": build_prompt(obs, level)})
+    if failures:
+        print(f"[DATASET] {failures}/{n} resets failed; used fallback prompts", flush=True)
     return Dataset.from_list(rows)
 
 
@@ -291,6 +331,9 @@ def reward_episode_resolution(prompts, completions, **kwargs):
 
     Maps grader.total in [0.001, 0.999] to a reward in [-2, +5] so the
     grader dominates over the parse/cmd shaping rewards above.
+
+    EnvAdapter never raises (returns {} on HTTP failures), so this function
+    is robust to transient network errors during the long rollout.
     """
     env: EnvAdapter = reward_episode_resolution.env  # type: ignore[attr-defined]
     model = getattr(reward_episode_resolution, "model", None)
@@ -304,30 +347,25 @@ def reward_episode_resolution(prompts, completions, **kwargs):
         env.reset()
         first = parse_action(_completion_text(completion))
 
-        try:
-            step_resp = env.step(first)
-            done = bool(step_resp.get("done", False))
-            obs = step_resp.get("observation", {})
-        except requests.HTTPError:
-            done, obs = True, {}
+        step_resp = env.step(first)
+        done = bool(step_resp.get("done", False))
+        obs = step_resp.get("observation", {})
 
         steps = 1
         while not done and can_continue and steps < MAX_STEPS_PER_EPISODE:
-            action = generate_action(model, tokenizer, obs, level)
             try:
-                step_resp = env.step(action)
-            except requests.HTTPError:
+                action = generate_action(model, tokenizer, obs, level)
+            except Exception as e:
+                print(f"[TRAIN] inner generate_action failed: {e}", flush=True)
                 break
+            step_resp = env.step(action)
             obs = step_resp.get("observation", {})
             done = bool(step_resp.get("done", False))
             steps += 1
 
-        try:
-            grader = env.grader()
-            total = float(grader.get("total", 0.001))
-            resolved = bool(grader.get("resolved", False))
-        except requests.HTTPError:
-            total, resolved = 0.001, False
+        grader = env.grader() or {}
+        total = float(grader.get("total", 0.001) or 0.001)
+        resolved = bool(grader.get("resolved", False))
 
         # Map [0.001, 0.999] -> [-2, +5] (resolved gives a +1 bonus)
         mapped = -2.0 + 7.0 * total + (1.0 if resolved else 0.0)
@@ -443,6 +481,11 @@ def main():
         logging_steps=1,
         report_to=[],                            # set to "trackio" inside Colab
         save_steps=max(25, MAX_TRAIN_STEPS),
+        # Constrain generation: our action JSON is < 80 tokens; prompt is < 900
+        max_prompt_length=896,
+        max_completion_length=96,
+        temperature=0.9,                         # diversity for GRPO group baseline
+        top_p=0.9,
     )
     trainer = GRPOTrainer(
         model=model,
