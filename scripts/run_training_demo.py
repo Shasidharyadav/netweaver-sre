@@ -287,6 +287,49 @@ def _plot_with_matplotlib(results: Dict) -> bool:
     plt.savefig("server/assets/reward_curve.png", dpi=160)
     plt.close()
 
+    # Loss curve (1 - reward, the standard rubric-loss convention)
+    loss = [1.0 - r for r in tr]
+    plt.figure(figsize=(10, 5))
+    plt.plot(range(1, len(loss) + 1), loss, linewidth=1.6, color="#dc2626",
+             alpha=0.55, label="Per-episode loss (1 - reward)")
+    if len(loss) >= 5:
+        lma = [sum(loss[max(0, i - 4):i + 1]) / min(5, i + 1) for i in range(len(loss))]
+        plt.plot(range(1, len(lma) + 1), lma, linewidth=2.6, color="#2563eb",
+                 label="5-step moving average")
+    plt.xlabel("Training step")
+    plt.ylabel("Loss (1 - rubric score)")
+    plt.title("NetWeaver SRE — Training Loss Curve")
+    plt.grid(alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("server/assets/loss_curve.png", dpi=160)
+    plt.close()
+
+    # Combined baseline vs trained on the SAME axes (hack.md \u00a7278)
+    before = results["before_rewards"]
+    after = results["after_rewards"]
+    n = max(len(before), len(after))
+    plt.figure(figsize=(10, 5))
+    plt.plot(range(1, len(before) + 1), before, marker="o", linewidth=1.4,
+             color="#9333ea", alpha=0.75, label="Before (random baseline)")
+    plt.plot(range(1, len(after) + 1), after, marker="s", linewidth=1.4,
+             color="#16a34a", alpha=0.85, label="After (trained policy)")
+    bavg = sum(before) / len(before) if before else 0.0
+    aavg = sum(after) / len(after) if after else 0.0
+    plt.axhline(bavg, color="#9333ea", linestyle="--", alpha=0.55,
+                label=f"Before mean = {bavg:.3f}")
+    plt.axhline(aavg, color="#16a34a", linestyle="--", alpha=0.55,
+                label=f"After mean = {aavg:.3f}")
+    plt.xlabel("Evaluation episode")
+    plt.ylabel("Reward (rubric score)")
+    plt.title("Per-episode reward: random baseline vs. trained policy")
+    plt.ylim(0.0, 1.0)
+    plt.grid(alpha=0.3)
+    plt.legend(loc="lower right")
+    plt.tight_layout()
+    plt.savefig("server/assets/baseline_vs_trained.png", dpi=160)
+    plt.close()
+
     bavg = sum(results["before_rewards"]) / len(results["before_rewards"])
     aavg = sum(results["after_rewards"]) / len(results["after_rewards"])
     plt.figure(figsize=(6, 5))
@@ -419,6 +462,52 @@ def _plot_with_pillow(results: Dict) -> None:
     _text(d, (lx + 36, ly + 20), "5-step moving avg", f_lbl)
     img.save("server/assets/reward_curve.png", "PNG", optimize=True)
 
+    # ── 1b) Loss curve (1 - reward) ───────────────────────────────────────
+    img, d, area, (f_lbl, f_sm) = _frame(
+        W, H,
+        "NetWeaver SRE — Training Loss Curve",
+        "Loss (1 - reward)", "Training step",
+    )
+    loss = [1.0 - r for r in tr]
+    _draw_curve(d, area, loss, RED, width=2)
+    if len(loss) >= 5:
+        lma = [sum(loss[max(0, i - 4):i + 1]) / min(5, i + 1) for i in range(len(loss))]
+        _draw_curve(d, area, lma, BLUE, width=3)
+    lx, ly = area[2] - 220, area[1] + 10
+    d.line([(lx, ly + 8), (lx + 30, ly + 8)], fill=RED, width=2)
+    _text(d, (lx + 36, ly), "Per-episode loss", f_lbl)
+    d.line([(lx, ly + 28), (lx + 30, ly + 28)], fill=BLUE, width=3)
+    _text(d, (lx + 36, ly + 20), "5-step moving avg", f_lbl)
+    img.save("server/assets/loss_curve.png", "PNG", optimize=True)
+
+    # ── 1c) Baseline vs trained on the SAME axes (hack.md \u00a7278) ─────────
+    img, d, area, (f_lbl, f_sm) = _frame(
+        W, H,
+        "Per-episode reward: random baseline vs. trained policy",
+        "Reward (rubric score)", "Evaluation episode",
+    )
+    before_seq = results["before_rewards"]
+    after_seq = results["after_rewards"]
+    _draw_curve(d, area, before_seq, PURPLE, width=2)
+    _draw_curve(d, area, after_seq, GREEN, width=2)
+    # Mean lines
+    if before_seq:
+        bavg = sum(before_seq) / len(before_seq)
+        x0, y0, x1, y1 = area
+        yy = y1 - (y1 - y0) * max(0.0, min(1.0, bavg))
+        d.line([(x0, yy), (x1, yy)], fill=PURPLE, width=1)
+    if after_seq:
+        aavg = sum(after_seq) / len(after_seq)
+        x0, y0, x1, y1 = area
+        yy = y1 - (y1 - y0) * max(0.0, min(1.0, aavg))
+        d.line([(x0, yy), (x1, yy)], fill=GREEN, width=1)
+    lx, ly = area[2] - 260, area[1] + 10
+    d.line([(lx, ly + 8), (lx + 30, ly + 8)], fill=PURPLE, width=2)
+    _text(d, (lx + 36, ly), f"Before (mean={sum(before_seq)/max(1,len(before_seq)):.3f})", f_lbl)
+    d.line([(lx, ly + 28), (lx + 30, ly + 28)], fill=GREEN, width=2)
+    _text(d, (lx + 36, ly + 20), f"After (mean={sum(after_seq)/max(1,len(after_seq)):.3f})", f_lbl)
+    img.save("server/assets/baseline_vs_trained.png", "PNG", optimize=True)
+
     # ── 2) Before / After bar ──────────────────────────────────────────────
     W, H = 720, 520
     img, d, area, (f_lbl, f_sm) = _frame(
@@ -497,8 +586,8 @@ def main():
 
     try:
         _plot_all(results)
-        print("Saved: server/assets/{reward_curve,before_after,difficulty_breakdown}.png",
-              flush=True)
+        print("Saved: server/assets/{reward_curve,loss_curve,baseline_vs_trained,"
+              "before_after,difficulty_breakdown}.png", flush=True)
     except Exception as e:
         print(f"[WARN] Plot generation failed: {e}", flush=True)
 

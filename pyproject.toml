@@ -14,8 +14,13 @@ version = "0.1.0"
 description = "Netweaver Sre environment for OpenEnv"
 requires-python = ">=3.10"
 dependencies = [
-    # Core OpenEnv runtime (provides FastAPI server + HTTP client types)
-    "openenv-core[core]>=0.2.2",
+    # Core OpenEnv runtime (provides FastAPI server + HTTP client types + Rubric base class)
+    "openenv-core[core]>=0.2.3",
+    # Server / web stack
+    "fastapi>=0.110.0",
+    "uvicorn>=0.27.0",
+    "pydantic>=2.0.0",
+    "pillow>=10.0.0",
     # Inference dependencies
     "openai>=1.0.0",
     "python-dotenv>=1.0.0",

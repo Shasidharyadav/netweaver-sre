@@ -215,110 +215,13 @@ def _commands_appear_in_order(commands_issued, required):
 
 
 def compute_grader_score(task_id: str, episode_state: dict) -> dict:
-    """
-    Score an episode using a 3-section deterministic rubric:
-        Diagnosis (40%)  +  Resolution (40%)  +  Best Practice (20%)
+    """Score an episode using OpenEnv's Rubric system (RFC 004).
+
+    Delegates to `rubrics.NetWeaverSREComposedRubric` which composes
+    three child rubrics:
+        DiagnosisRubric (40%) + ResolutionRubric (40%) + BestPracticeRubric (20%)
 
     All sub-scores and the total are clamped to (0.001, 0.999).
     """
-    cfg = GRADER_CONFIG.get(task_id)
-    if not cfg:
-        return {
-            "resolved": False,
-            "total": 0.001,
-            "breakdown": {"diagnosis": 0.001, "resolution": 0.001, "best_practice": 0.001},
-        }
-
-    actions = episode_state.get("actions", []) or []
-    steps = max(1, int(episode_state.get("steps", 1) or 1))
-    obs_seen = set(episode_state.get("obs_fields_seen", set()) or set())
-    had_fatal = bool(episode_state.get("had_fatal", False))
-    error_count = int(episode_state.get("error_count", 0) or 0)
-
-    commands_issued = [str(a.get("command", "")).upper() for a in actions]
-    targets_issued = [str(a.get("target", "")).lower() for a in actions]
-
-    # ── Diagnosis (40%) ───────────────────────────────────────────────────
-    diag_field_score = 0.0
-    for field in cfg.get("diagnosis_fields", []):
-        if field in obs_seen:
-            diag_field_score = 0.20
-            break
-
-    target_kw = (cfg.get("required_target_kw") or "").lower()
-    if target_kw == "":
-        # Any non-empty target counts (e.g. dynamic service names for t03)
-        diag_target_score = 0.20 if any(t for t in targets_issued) else 0.0
-    else:
-        diag_target_score = 0.20 if any(target_kw in t for t in targets_issued) else 0.0
-
-    diagnosis_score = diag_field_score + diag_target_score   # max 0.40
-
-    # ── Resolution (40%) ──────────────────────────────────────────────────
-    required_cmds = [c.upper() for c in cfg["required_commands"]]
-    all_cmds_issued = all(rc in commands_issued for rc in required_cmds)
-
-    enforce_order = bool(cfg.get("enforce_order", False))
-    order_ok = True
-    if all_cmds_issued and enforce_order:
-        order_ok = _commands_appear_in_order(commands_issued, required_cmds)
-
-    resolution_score = 0.0
-    if all_cmds_issued and order_ok:
-        # Value check (for numeric-parameter tasks): use the LAST matching
-        # action of the LAST required command.
-        vrange = cfg.get("required_value_range")
-        value_ok = True
-        if vrange is not None:
-            matched_value = None
-            for a in actions:
-                if str(a.get("command", "")).upper() == required_cmds[-1]:
-                    matched_value = a.get("value")
-            if matched_value is None:
-                value_ok = False
-            else:
-                try:
-                    matched_int = int(matched_value)
-                    value_ok = vrange[0] <= matched_int <= vrange[1]
-                except (TypeError, ValueError):
-                    value_ok = False
-
-        if value_ok:
-            resolution_score = 0.40
-            ideal = int(cfg.get("ideal_steps", 3))
-            over = max(0, steps - ideal)
-            efficiency = max(0.5, 1.0 - over * 0.05)
-            resolution_score *= efficiency
-
-    elif all_cmds_issued and not order_ok:
-        # Right commands, wrong order: half credit
-        resolution_score = 0.20
-
-    elif required_cmds:
-        # Partial credit for issuing some required commands
-        hits = sum(1 for rc in required_cmds if rc in commands_issued)
-        if hits > 0:
-            resolution_score = 0.40 * (hits / len(required_cmds)) * 0.5  # capped at 0.20
-
-    # ── Best Practice (20%) ───────────────────────────────────────────────
-    bp_score = 0.20
-    if had_fatal:
-        bp_score = 0.001
-    elif any(c in commands_issued for c in DESTRUCTIVE_COMMANDS):
-        bp_score = 0.001
-    elif steps > 0 and (error_count / max(1, steps)) >= 0.30:
-        bp_score = 0.10
-
-    # ── Total ─────────────────────────────────────────────────────────────
-    total = diagnosis_score + resolution_score + bp_score
-    total = max(0.001, min(0.999, total))
-
-    return {
-        "resolved": resolution_score >= 0.20,
-        "total": round(total, 3),
-        "breakdown": {
-            "diagnosis": round(max(0.001, min(0.999, diagnosis_score)), 3),
-            "resolution": round(max(0.001, min(0.999, resolution_score)), 3),
-            "best_practice": round(max(0.001, min(0.999, bp_score)), 3),
-        },
-    }
+    from rubrics import compute_grader_score as _impl
+    return _impl(task_id, episode_state)

@@ -65,8 +65,8 @@
     0.5,
     0.5,
     0.66,
+    0.7,
     0.5,
-    0.3,
     0.84,
     0.5,
     0.5,
@@ -84,7 +84,7 @@
     0.82,
     0.3,
     0.3,
-    0.3
+    0.5
   ],
   "after_rewards": [
     0.999,
@@ -121,7 +121,7 @@
   "difficulty_breakdown": {
     "before": {
       "easy": 0.4822222222222222,
-      "medium": 0.508888888888889,
+      "medium": 0.5755555555555555,
       "hard": 0.60725
     },
     "after": {
@@ -130,7 +130,7 @@
       "hard": 0.999
     }
   },
-  "timestamp": "2026-04-25 19:22:32",
+  "timestamp": "2026-04-25 19:33:43",
   "source": "heuristic_training_demo",
   "notes": "Heuristic epsilon-decay policy with exploration noise; rewards are actual /grader scores from the live FastAPI server. Use train_grpo.py on a T4 GPU for a real GRPO run."
 }

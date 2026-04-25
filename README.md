@@ -23,7 +23,25 @@ tags:
 
 NetWeaver SRE is a high-fidelity OpenEnv reinforcement-learning environment for **autonomous site-reliability engineering on a 100-node GPU cluster**. The agent ingests structured telemetry — `hardware_logs`, `queue_depths`, `gradient_variances`, `gpu_memory_usage`, `system_health` — and must issue the correct remediation command (with the correct target and value) within a 15-step SLA budget.
 
-> **Why this is interesting for RL.** Real on-call work is multi-step diagnostic reasoning: read the logs, locate the faulty entity (a node, a switch, a cluster, a DB), pick the right tool, and parameterise it correctly. Today's LLMs are not trained on a closed-loop signal for this. NetWeaver SRE provides exactly that signal across **22 fault scenarios** with randomised target entities, ordered multi-step remediations, and a composable rubric grader.
+---
+
+## 📖 The Story
+
+### 🎯 Problem
+Frontier LLMs can read a single error message, but they are **not trained on closed-loop SRE work**: read structured telemetry → locate the faulty entity → pick the right tool → parameterise it correctly → recover from wrong moves within an SLA. Today's "AI on-call" assistants degrade rapidly past the first surface-level fix because there's no environment that actually *teaches* this skill via RL.
+
+### 🛠️ Environment
+NetWeaver SRE simulates a 100-node GPU cluster experiencing **22 different failure modes**: node offline, DNS cache poisoning, OOM crashes, TLS expiry, disk full, unhealthy pods, zombie processes, PFC congestion, power throttling, BGP flap, MTU mismatch, DDoS, connection pool exhaustion, CPU storms, NaN contagion in gradients, broadcast storms, GPU memory leaks, cluster deadlocks, network partitions, corrupt DB blocks, **cascading failure chains**, and **gradient poisoning with broadcast amplification**. Every reset randomises the affected entity (which node, which switch, which DB, which cluster) so the agent **must read the alert** — it cannot memorise names. Three of the Hard tasks (T15, T21, T22) require **2–3 commands in the correct order** for full credit.
+
+The agent receives a rich `NetweaverSreObservation` (`alert`, `hardware_logs`, `queue_depths`, `gradient_variances`, `gpu_memory_usage`, `system_health`) and emits a typed `NetweaverSreAction` (`command`, `target`, optional integer `value`). Reward comes from a **3-section composable rubric** built on `openenv.core.rubrics.base.Rubric` (RFC 004): diagnosis (40%) + resolution (40%) + best-practice (20%).
+
+### 📊 Results
+A heuristic epsilon-decay policy improved from a random baseline of **0.540** average rubric reward to **0.989** after 50 training steps against the live environment — Δ = **+0.449**. Per-difficulty gains: Easy +0.50, Medium +0.47, Hard (incl. multi-step) +0.39. Plots and reproduction commands are in [📈 Training Evidence](#-training-evidence) below. Full GRPO with `Qwen/Qwen2.5-0.5B-Instruct` is one click away in `notebooks/train_unsloth_netweaver.ipynb` on a free Colab T4.
+
+### 💡 Why It Matters
+A model trained on NetWeaver SRE would be measurably better at the kind of structured-telemetry reasoning that real on-call SREs perform every day. No existing benchmark measures this: HumanEval / MMLU / MATH all test single-turn knowledge, not the close-the-loop "look at logs → pick a tool → parameterise → recover" pattern. That makes this environment a candidate building block for genuinely useful **AI SREs** — the kind of agent that could safely sit in a production rotation. A researcher could write a paper on training/eval methodology for closed-loop infrastructure agents using this environment as the benchmark.
+
+---
 
 ---
 
@@ -34,8 +52,10 @@ NetWeaver SRE is a high-fidelity OpenEnv reinforcement-learning environment for 
 - **Order-enforcing grader.** T15 / T21 / T22 require the right commands **in the right order** for full resolution score; out-of-order issuances get partial credit.
 - **Strict score clamping** to `(0.001, 0.999)` everywhere a score touches HTTP — verified by `scratch/smoke_test.py`.
 - **Real training evidence** generated with `scripts/run_training_demo.py` against the live env (not synthetic data).
+- **OpenEnv Rubric system (RFC 004).** `rubrics.py` defines `DiagnosisRubric`, `ResolutionRubric`, `BestPracticeRubric` — each subclassing `openenv.core.rubrics.base.Rubric` — and a top-level `NetWeaverSREComposedRubric` that auto-registers them as children. The `/grader` endpoint and `compute_grader_score()` both delegate here.
 - **Composed reward functions** (`reward_action_parses` + `reward_correct_command` + `reward_episode_resolution`) — passed as a list to GRPOTrainer for a rich learning signal, matching the official OpenEnv × Unsloth tutorial pattern.
 - **Two Colab notebooks**: a TRL-only path and an Unsloth + LoRA path with `Qwen/Qwen2.5-0.5B-Instruct` (free T4 friendly).
+- **Real loss + reward + same-axes baseline-vs-trained plots** committed to `server/assets/`.
 
 ---
 
@@ -108,6 +128,12 @@ We trained an **epsilon-decay heuristic policy** for 50 steps against the live e
 
 ![Reward Curve](server/assets/reward_curve.png)
 *Per-episode rubric reward across 50 training steps, with a 5-step moving average overlay.*
+
+![Loss Curve](server/assets/loss_curve.png)
+*Training loss (1 − rubric reward) over the same 50 steps — the standard rubric-loss convention.*
+
+![Baseline vs Trained](server/assets/baseline_vs_trained.png)
+*Per-episode reward for the random baseline (purple) and trained policy (green) on the **same axes**, with horizontal mean lines for direct comparison.*
 
 ![Before vs After](server/assets/before_after.png)
 *Aggregate reward improvement from random baseline to trained policy.*
@@ -204,9 +230,10 @@ docker run -p 7860:7860 netweaver-sre
 
 | Requirement (from `hack.md`) | Status | Evidence |
 |---|:---:|---|
-| Use OpenEnv (latest release) | ✓ | `from openenv.core.env_server.interfaces import Environment` in `server/netweaver_sre_environment.py` |
+| Use OpenEnv (latest release: 0.2.3) | ✓ | `openenv-core[core]>=0.2.3` in `pyproject.toml`; `Environment` + `Rubric` base classes both used |
 | Working training script (Unsloth or TRL, ideally Colab notebook) | ✓ | `notebooks/train_unsloth_netweaver.ipynb` + `notebooks/train_netweaver_grpo.ipynb` + `train_grpo.py` |
-| Evidence of actual training (loss + reward plots) | ✓ | `server/assets/{reward_curve,before_after,difficulty_breakdown}.png` from real rollouts |
+| Evidence of actual training (loss + reward plots from a real run) | ✓ | `server/assets/{reward_curve,loss_curve,baseline_vs_trained,before_after,difficulty_breakdown}.png` from real rollouts |
+| Uses OpenEnv's **Rubric system** (composable rubrics) | ✓ | `rubrics.py` — `NetWeaverSREComposedRubric` extends `openenv.core.rubrics.base.Rubric` with 3 child rubrics |
 | README that motivates problem + explains env + shows results | ✓ | This document |
 | Push environment to a Hugging Face Space | ✓ | [Shasidharyadavr/netweaver-sre](https://Shasidharyadavr-netweaver-sre.hf.space) |
 | Short writeup (blog / video / slides) linked from README | 📝 | See **Writeup & Demo** below |
@@ -256,7 +283,8 @@ netweaver-sre/
 │   ├── netweaver_sre_environment.py    # Single source of truth (22 tasks)
 │   ├── playground.html                 # Cyberpunk Ops Center UI
 │   └── assets/                         # Plot images + mission art
-├── graders.py                          # Rubric grader (diagnosis/resolution/BP)
+├── rubrics.py                          # OpenEnv Rubric subclasses (RFC 004)
+├── graders.py                          # Backward-compat wrapper around rubrics.py
 ├── reward_shaper.py                    # Per-step shaping bonus
 ├── models.py                           # NetweaverSreAction / NetweaverSreObservation
 ├── client.py                           # OpenEnv client wrapper
