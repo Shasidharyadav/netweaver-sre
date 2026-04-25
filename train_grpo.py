@@ -481,11 +481,10 @@ def main():
         logging_steps=1,
         report_to=[],                            # set to "trackio" inside Colab
         save_steps=max(25, MAX_TRAIN_STEPS),
-        # Constrain generation: our action JSON is < 80 tokens; prompt is < 900
-        max_prompt_length=896,
+        # Constrain generation: our action JSON is < 80 tokens; cap aggressively
+        # so each step is fast. (max_prompt_length was removed in newer TRL —
+        # prompt length is auto-inferred from the dataset.)
         max_completion_length=96,
-        temperature=0.9,                         # diversity for GRPO group baseline
-        top_p=0.9,
     )
     trainer = GRPOTrainer(
         model=model,
