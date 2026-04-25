@@ -16,3 +16,9 @@ test_all_levels.py
 
 # uv
 .venv/
+
+# Local-only notes (never committed)
+AI_ATTRIBUTION_LOCAL.md
+NOTES_LOCAL.md
+*_LOCAL.md
+job_logs.txt
