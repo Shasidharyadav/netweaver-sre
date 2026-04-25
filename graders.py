@@ -1,15 +1,19 @@
+# graders.py
+# Per-task rubric grader. Returns {resolved, total, breakdown}.
+# All scores are clamped strictly to (0.001, 0.999).
+
 from typing import Optional
 
 # ---------------------------------------------------------------------------
-# Task grader config – one entry per task
-# ---------------------------------------------------------------------------
+# Task grader config – one entry per task.
 # Fields:
-#   fault_type          – matches CORRECTIVE_VALID_FAULTS keys in reward_shaper
-#   required_commands   – ALL of these must appear in actions for full resolution
-#   required_target_kw  – target string must contain this keyword (case-insensitive)
-#   required_value_range– (min, max) inclusive; None means value not checked
-#   diagnosis_fields    – obs fields the agent should have read (for diagnosis score)
-#   ideal_steps         – steps at or below which efficiency = 1.0
+#   fault_type           – matches CORRECTIVE_VALID_FAULTS keys in reward_shaper
+#   required_commands    – ALL of these must appear in actions
+#   required_target_kw   – target string must contain this keyword (lowercased)
+#   required_value_range – (min, max) inclusive; None means value not checked
+#   diagnosis_fields     – obs fields the agent should have read for diagnosis
+#   ideal_steps          – steps at or below which efficiency = 1.0
+#   enforce_order        – if True, required_commands must appear in this order
 # ---------------------------------------------------------------------------
 GRADER_CONFIG = {
     # ── EASY ──────────────────────────────────────────────────────────────
@@ -32,7 +36,7 @@ GRADER_CONFIG = {
     "netweaver_sre_t03": {
         "fault_type": "oom_crash",
         "required_commands": ["RESTART_SERVICE"],
-        "required_target_kw": "service",
+        "required_target_kw": "",  # service name is dynamic; accept any
         "required_value_range": None,
         "diagnosis_fields": ["hardware_logs"],
         "ideal_steps": 2,
@@ -73,7 +77,7 @@ GRADER_CONFIG = {
     "netweaver_sre_t08": {
         "fault_type": "pfc_congestion",
         "required_commands": ["TUNE_PFC_THRESHOLD"],
-        "required_target_kw": "switch",
+        "required_target_kw": "sw",
         "required_value_range": (1000, 9000),
         "diagnosis_fields": ["queue_depths"],
         "ideal_steps": 3,
@@ -97,7 +101,7 @@ GRADER_CONFIG = {
     "netweaver_sre_t11": {
         "fault_type": "packet_drop",
         "required_commands": ["INCREASE_MTU"],
-        "required_target_kw": "switch",
+        "required_target_kw": "sw",
         "required_value_range": (9000, 9000),
         "diagnosis_fields": ["queue_depths"],
         "ideal_steps": 3,
@@ -107,7 +111,7 @@ GRADER_CONFIG = {
         "required_commands": ["SET_RATE_LIMIT"],
         "required_target_kw": "gateway",
         "required_value_range": (100, 100000),
-        "diagnosis_fields": ["hardware_logs"],
+        "diagnosis_fields": ["queue_depths"],
         "ideal_steps": 3,
     },
     "netweaver_sre_t13": {
@@ -129,16 +133,17 @@ GRADER_CONFIG = {
     # ── HARD ──────────────────────────────────────────────────────────────
     "netweaver_sre_t15": {
         "fault_type": "nan_contagion",
-        "required_commands": ["RUN_MINI_ITERATION", "DRAIN_TRAFFIC"],  # multi-step
+        "required_commands": ["RUN_MINI_ITERATION", "DRAIN_TRAFFIC"],
         "required_target_kw": "cluster",
         "required_value_range": None,
         "diagnosis_fields": ["gradient_variances"],
         "ideal_steps": 4,
+        "enforce_order": True,
     },
     "netweaver_sre_t16": {
         "fault_type": "broadcast_storm",
         "required_commands": ["ISOLATE_BROADCAST_STORM"],
-        "required_target_kw": "switch",
+        "required_target_kw": "sw",
         "required_value_range": None,
         "diagnosis_fields": ["queue_depths"],
         "ideal_steps": 3,
@@ -154,7 +159,7 @@ GRADER_CONFIG = {
     "netweaver_sre_t18": {
         "fault_type": "cluster_deadlock",
         "required_commands": ["ISSUE_GLOBAL_ROLLBACK"],
-        "required_target_kw": "cluster_0",
+        "required_target_kw": "cluster",
         "required_value_range": None,
         "diagnosis_fields": ["system_health"],
         "ideal_steps": 3,
@@ -170,72 +175,101 @@ GRADER_CONFIG = {
     "netweaver_sre_t20": {
         "fault_type": "corrupt_db",
         "required_commands": ["PURGE_CORRUPT_BLOCK"],
-        "required_target_kw": "cluster",
+        "required_target_kw": "db",
         "required_value_range": None,
         "diagnosis_fields": ["system_health"],
         "ideal_steps": 4,
     },
+    "netweaver_sre_t21": {
+        "fault_type": "cascading_failure",
+        "required_commands": ["ADJUST_POWER_CAP", "PIN_CPU_THREADS", "SCALE_CONN_POOL"],
+        "required_target_kw": "node",
+        "required_value_range": None,
+        "diagnosis_fields": ["hardware_logs"],
+        "ideal_steps": 6,
+        "enforce_order": True,
+    },
+    "netweaver_sre_t22": {
+        "fault_type": "gradient_poisoning",
+        "required_commands": ["RUN_MINI_ITERATION", "ISOLATE_BROADCAST_STORM", "DRAIN_TRAFFIC"],
+        "required_target_kw": "cluster",
+        "required_value_range": None,
+        "diagnosis_fields": ["gradient_variances", "queue_depths"],
+        "ideal_steps": 6,
+        "enforce_order": True,
+    },
 }
 
 DESTRUCTIVE_COMMANDS = {
-    "FORCE_REBOOT_ALL", "KILL_ALL_NODES", "WIPE_CLUSTER", "DROP_ALL_TRAFFIC"
+    "FORCE_REBOOT_ALL", "KILL_ALL_NODES", "WIPE_CLUSTER", "DROP_ALL_TRAFFIC",
 }
+
+
+def _commands_appear_in_order(commands_issued, required):
+    """True iff `required` is a subsequence of `commands_issued`."""
+    i = 0
+    for cmd in commands_issued:
+        if i < len(required) and cmd == required[i]:
+            i += 1
+    return i == len(required)
 
 
 def compute_grader_score(task_id: str, episode_state: dict) -> dict:
     """
-    Score an episode using a 3-section deterministic rubric.
+    Score an episode using a 3-section deterministic rubric:
+        Diagnosis (40%)  +  Resolution (40%)  +  Best Practice (20%)
 
-    episode_state keys expected:
-        actions         – list of {"command": str, "target": str, "value": int|None}
-        steps           – int, number of steps taken
-        obs_fields_seen – set of obs field names agent actually received data from
-        had_fatal       – bool, True if a destructive command was issued
+    All sub-scores and the total are clamped to (0.001, 0.999).
     """
     cfg = GRADER_CONFIG.get(task_id)
     if not cfg:
         return {
             "resolved": False,
             "total": 0.001,
-            "breakdown": {"diagnosis": 0.0, "resolution": 0.0, "best_practice": 0.0}
+            "breakdown": {"diagnosis": 0.001, "resolution": 0.001, "best_practice": 0.001},
         }
 
-    actions        = episode_state.get("actions", [])
-    steps          = max(1, episode_state.get("steps", 1))
-    obs_seen       = episode_state.get("obs_fields_seen", set())
-    had_fatal      = episode_state.get("had_fatal", False)
-    error_count    = episode_state.get("error_count", 0)
+    actions = episode_state.get("actions", []) or []
+    steps = max(1, int(episode_state.get("steps", 1) or 1))
+    obs_seen = set(episode_state.get("obs_fields_seen", set()) or set())
+    had_fatal = bool(episode_state.get("had_fatal", False))
+    error_count = int(episode_state.get("error_count", 0) or 0)
 
     commands_issued = [str(a.get("command", "")).upper() for a in actions]
-    targets_issued  = [str(a.get("target", "")).lower() for a in actions]
-    values_issued   = [a.get("value") for a in actions]
+    targets_issued = [str(a.get("target", "")).lower() for a in actions]
 
-    # ── Diagnosis (40%) ──────────────────────────────────────────────────
-    # 20% for reading the right obs field, 20% for targeting the correct entity
+    # ── Diagnosis (40%) ───────────────────────────────────────────────────
     diag_field_score = 0.0
-    for field in cfg["diagnosis_fields"]:
+    for field in cfg.get("diagnosis_fields", []):
         if field in obs_seen:
-            diag_field_score = 0.20   # at least one required field read
+            diag_field_score = 0.20
             break
 
-    target_kw = cfg["required_target_kw"].lower()
-    diag_target_score = 0.0
-    if any(target_kw in t for t in targets_issued):
-        diag_target_score = 0.20
+    target_kw = (cfg.get("required_target_kw") or "").lower()
+    if target_kw == "":
+        # Any non-empty target counts (e.g. dynamic service names for t03)
+        diag_target_score = 0.20 if any(t for t in targets_issued) else 0.0
+    else:
+        diag_target_score = 0.20 if any(target_kw in t for t in targets_issued) else 0.0
 
-    diagnosis_score = diag_field_score + diag_target_score  # max 0.40
+    diagnosis_score = diag_field_score + diag_target_score   # max 0.40
 
-    # ── Resolution (40%) ─────────────────────────────────────────────────
+    # ── Resolution (40%) ──────────────────────────────────────────────────
     required_cmds = [c.upper() for c in cfg["required_commands"]]
     all_cmds_issued = all(rc in commands_issued for rc in required_cmds)
 
+    enforce_order = bool(cfg.get("enforce_order", False))
+    order_ok = True
+    if all_cmds_issued and enforce_order:
+        order_ok = _commands_appear_in_order(commands_issued, required_cmds)
+
     resolution_score = 0.0
-    if all_cmds_issued:
-        # Value check (for numeric-parameter tasks)
+    if all_cmds_issued and order_ok:
+        # Value check (for numeric-parameter tasks): use the LAST matching
+        # action of the LAST required command.
         vrange = cfg.get("required_value_range")
         value_ok = True
         if vrange is not None:
-            # Find the value paired with the last required command
             matched_value = None
             for a in actions:
                 if str(a.get("command", "")).upper() == required_cmds[-1]:
@@ -244,37 +278,47 @@ def compute_grader_score(task_id: str, episode_state: dict) -> dict:
                 value_ok = False
             else:
                 try:
-                    value_ok = vrange[0] <= int(matched_value) <= vrange[1]
+                    matched_int = int(matched_value)
+                    value_ok = vrange[0] <= matched_int <= vrange[1]
                 except (TypeError, ValueError):
                     value_ok = False
 
         if value_ok:
             resolution_score = 0.40
-            # Efficiency multiplier: -0.05 per step over ideal, floor 0.5×
-            ideal = cfg.get("ideal_steps", 3)
-            over  = max(0, steps - ideal)
+            ideal = int(cfg.get("ideal_steps", 3))
+            over = max(0, steps - ideal)
             efficiency = max(0.5, 1.0 - over * 0.05)
             resolution_score *= efficiency
 
-    # ── Best Practice (20%) ──────────────────────────────────────────────
+    elif all_cmds_issued and not order_ok:
+        # Right commands, wrong order: half credit
+        resolution_score = 0.20
+
+    elif required_cmds:
+        # Partial credit for issuing some required commands
+        hits = sum(1 for rc in required_cmds if rc in commands_issued)
+        if hits > 0:
+            resolution_score = 0.40 * (hits / len(required_cmds)) * 0.5  # capped at 0.20
+
+    # ── Best Practice (20%) ───────────────────────────────────────────────
     bp_score = 0.20
     if had_fatal:
-        bp_score = 0.0
+        bp_score = 0.001
     elif any(c in commands_issued for c in DESTRUCTIVE_COMMANDS):
-        bp_score = 0.0
-    elif steps > 0 and (error_count / steps) >= 0.30:
-        bp_score = 0.10  # high error rate – partial deduction
+        bp_score = 0.001
+    elif steps > 0 and (error_count / max(1, steps)) >= 0.30:
+        bp_score = 0.10
 
     # ── Total ─────────────────────────────────────────────────────────────
     total = diagnosis_score + resolution_score + bp_score
     total = max(0.001, min(0.999, total))
 
     return {
-        "resolved":      resolution_score > 0.0,
-        "total":         round(total, 3),
+        "resolved": resolution_score >= 0.20,
+        "total": round(total, 3),
         "breakdown": {
-            "diagnosis":     round(diagnosis_score, 3),
-            "resolution":    round(resolution_score, 3),
-            "best_practice": round(bp_score, 3),
-        }
+            "diagnosis": round(max(0.001, min(0.999, diagnosis_score)), 3),
+            "resolution": round(max(0.001, min(0.999, resolution_score)), 3),
+            "best_practice": round(max(0.001, min(0.999, bp_score)), 3),
+        },
     }

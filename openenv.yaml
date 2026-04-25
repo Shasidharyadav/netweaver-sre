@@ -221,7 +221,7 @@ tasks:
       task_level: t18
     description: >
       Full Cluster Deadlock. All arrays frozen at 0.0 — distributed deadlock.
-      Issue ISSUE_GLOBAL_ROLLBACK with target cluster_0.
+      Issue ISSUE_GLOBAL_ROLLBACK with the exact cluster target from logs.
       Efficiency penalty applied for steps beyond ideal (3).
       Scored on: diagnosis (40%) + resolution (40%) + best practice (20%).
 
@@ -244,7 +244,38 @@ tasks:
       endpoint: /grader
       task_level: t20
     description: >
-      Corrupt DB Block. Read system_health for the index dropping below 0.5.
-      Issue PURGE_CORRUPT_BLOCK on cluster_<exact index>.
+      Corrupt DB Block. Read logs for the randomized DB cluster target.
+      Issue PURGE_CORRUPT_BLOCK on that exact DB target.
       Efficiency penalty applied for steps beyond ideal (4).
+      Scored on: diagnosis (40%) + resolution+efficiency (40%) + best practice (20%).
+
+  - id: netweaver_sre_t21
+    difficulty: hard
+    grader:
+      type: deterministic
+      endpoint: /grader
+      task_level: t21
+    description: >
+      Cascading Failure Chain. A power fault triggers a CPU context switch storm
+      which overflows the connection pool. Requires 3 sequential remediations:
+      (1) ADJUST_POWER_CAP on the throttled node,
+      (2) PIN_CPU_THREADS on the same node,
+      (3) SCALE_CONN_POOL on the database.
+      Order matters. Partial credit for each completed step.
+      Scored on: diagnosis (40%) + resolution+efficiency (40%) + best practice (20%).
+
+  - id: netweaver_sre_t22
+    difficulty: hard
+    grader:
+      type: deterministic
+      endpoint: /grader
+      task_level: t22
+    description: >
+      Silent Gradient Poisoning with Network Amplification.
+      NaN is corrupting gradient sync AND a broadcast storm is amplifying the corrupted
+      gradients across the fabric. Requires:
+      (1) RUN_MINI_ITERATION to isolate NaN source cluster,
+      (2) ISOLATE_BROADCAST_STORM on the storm switch,
+      (3) DRAIN_TRAFFIC on the poisoned cluster.
+      All 3 commands required in this order for full resolution.
       Scored on: diagnosis (40%) + resolution+efficiency (40%) + best practice (20%).

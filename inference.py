@@ -37,6 +37,8 @@ TASKS = [
     ("netweaver_sre_t18", "hard",   "t18"),
     ("netweaver_sre_t19", "hard",   "t19"),
     ("netweaver_sre_t20", "hard",   "t20"),
+    ("netweaver_sre_t21", "hard",   "t21"),
+    ("netweaver_sre_t22", "hard",   "t22"),
 ]
 
 # Task-specific diagnostic hints so agent knows what to look at and what to issue
@@ -53,14 +55,16 @@ TASK_HINTS = {
     "t10": "Inspect hardware_logs for BGP flapping. Extract the AS number. Issue MITIGATE_ROUTE_FLAP on the router with that AS number as value.",
     "t11": "Inspect hardware_logs for jumbo frame / MTU packet drops. Issue INCREASE_MTU with value 9000 on the affected switch.",
     "t12": "Check queue_depths for traffic spike. Issue SET_RATE_LIMIT with a request count value on the affected gateway.",
-    "t13": "Check queue_depths for connection exhaustion. Issue SCALE_CONN_POOL with a pool size value (50-2000) on the database node.",
+    "t13": "Inspect hardware_logs for connection pool exhaustion on a 'db_cluster_*' target. Issue SCALE_CONN_POOL with a pool size value (50-5000) on that exact db_cluster_*.",
     "t14": "Inspect hardware_logs for high CPU context switching. Issue PIN_CPU_THREADS with a thread count (1-256) on the affected node.",
     "t15": "Check gradient_variances array for NaN or very high values. First issue RUN_MINI_ITERATION on the affected cluster to isolate, then issue DRAIN_TRAFFIC to contain it. Two actions required.",
     "t16": "Check queue_depths for a switch value near 99.9 (broadcast storm). Issue ISOLATE_BROADCAST_STORM on that switch.",
     "t17": "Check gpu_memory_usage array for a spike above normal. Issue RESTART_GPU_DAEMON on the affected cluster/node.",
-    "t18": "All telemetry arrays (gradient_variances, queue_depths, gpu_memory_usage) are frozen at 0.0 — this is a cluster deadlock. Issue ISSUE_GLOBAL_ROLLBACK on cluster_0.",
+    "t18": "All telemetry arrays (gradient_variances, queue_depths, gpu_memory_usage) are frozen at 0.0 — this is a cluster deadlock. Issue ISSUE_GLOBAL_ROLLBACK on the cluster named in hardware_logs.",
     "t19": "Check queue_depths for a split pattern (one very low ~0.01, one very high ~99.9) — network partition. Issue REBOOT_LEAF_SWITCHES on the affected pod.",
-    "t20": "Inspect hardware_logs or system_health array for a continually dropping index. Issue PURGE_CORRUPT_BLOCK on the exact cluster index that is dropping.",
+    "t20": "Inspect hardware_logs for a 'db_cluster_*' with a checksum mismatch / I/O error. Issue PURGE_CORRUPT_BLOCK on that exact db_cluster_*.",
+    "t21": "Cascading failure. ORDER MATTERS: (1) ADJUST_POWER_CAP value 350 on the throttled node_*, (2) PIN_CPU_THREADS value 64 on the SAME node_*, (3) SCALE_CONN_POOL value 800 on the db_cluster_* mentioned in logs. All 3 in order.",
+    "t22": "Gradient poisoning + broadcast amplification co-occurring. ORDER MATTERS: (1) RUN_MINI_ITERATION on the affected cluster_*, (2) ISOLATE_BROADCAST_STORM on the sw_* with 99.x queue depth, (3) DRAIN_TRAFFIC on the SAME cluster_*. All 3 in order.",
 }
 
 SYSTEM_PROMPT = """You are an Autonomous Site Reliability Engineer managing a 100-node GPU cluster.
